@@ -29,6 +29,14 @@ python3 -m http.server 8000
 
 Works well on a phone at the court.
 
+## Android APK
+
+The `android/` folder wraps the app in a native WebView for direct installation
+on Android (sideload). See `android/build-apk.sh` for the full toolchain-free
+build (aapt + dx + apksigner, no Android Studio). The bundled keystore is a
+hobby signing key for personal distribution — replace it with a private key
+before any store upload.
+
 ## Roadmap
 
 - Mexicano mode (pairs by standings)
