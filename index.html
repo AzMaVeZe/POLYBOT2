@@ -596,8 +596,9 @@ const STR = {
     shareHeadDone: 'תוצאות סופיות',
     shareHeadLive: 'מצב ביניים',
     sharePts: 'נק׳',
-    shareWins: 'ניצחונות',
+    shareWins: 'נצ׳',
     shareGames: '{n} משחקים',
+    shareTarget: 'יעד למשחק: {n} נק׳',
     langBtn: 'English',
     dir: 'rtl', lang: 'he', locale: 'he-IL',
   },
@@ -673,6 +674,7 @@ const STR = {
     sharePts: 'pts',
     shareWins: 'wins',
     shareGames: '{n} games',
+    shareTarget: 'target per game: {n} pts',
     langBtn: 'עברית',
     dir: 'ltr', lang: 'en', locale: 'en-GB',
   },
@@ -1221,19 +1223,25 @@ function deleteTournament(id) {
 /* ---------- sharing ---------- */
 
 function shareText(tour) {
+  // Plain text only: emoji get mangled into replacement characters through
+  // wa.me on some devices, and every line opens with a direction mark so
+  // mixed digits/Hebrew don't flip.
+  const dirMark = lang === 'he' ? '\u200F' : '\u200E';
   const order = rankOrder(tour);
-  const medals = ['🥇', '🥈', '🥉', '4.'];
   const head = tour.finished ? t('shareHeadDone') : t('shareHeadLive');
+  const brand = lang === 'he' ? 'פאדלז׳יט' : 'puddlezit';
   const lines = [
-    '🎾 ' + (lang === 'he' ? 'פאדלז׳יט' : 'puddlezit') + ' — ' + head,
-    new Date(tour.createdAt).toLocaleDateString(STR[lang].locale),
+    dirMark + '*' + brand + '* — ' + head,
+    dirMark + new Date(tour.createdAt).toLocaleDateString(STR[lang].locale),
     '',
   ];
   order.forEach((i, idx) => {
-    lines.push(medals[idx] + ' ' + tour.players[i] + ' — ' + tour.points[i] + ' ' + t('sharePts') + ' (' + tour.gamesWon[i] + ' ' + t('shareWins') + ')');
+    const name = idx === 0 ? '*' + tour.players[i] + '*' : tour.players[i];
+    lines.push(dirMark + (idx + 1) + '. ' + name + ' — ' +
+      tour.points[i] + ' ' + t('sharePts') + ' · ' + tour.gamesWon[i] + ' ' + t('shareWins'));
   });
   lines.push('');
-  lines.push(t('shareGames', tour.history.length) + ' · 🎯 ' + tour.target);
+  lines.push(dirMark + t('shareGames', tour.history.length) + ' · ' + t('shareTarget', tour.target));
   return lines.join('\n');
 }
 
