@@ -1,0 +1,460 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Puddle Game — Americano Scoreboard</title>
+<style>
+  :root {
+    --bg: #0f172a;
+    --card: #1e293b;
+    --card-2: #273449;
+    --text: #e2e8f0;
+    --muted: #94a3b8;
+    --accent: #38bdf8;
+    --accent-2: #0ea5e9;
+    --gold: #fbbf24;
+    --silver: #cbd5e1;
+    --bronze: #d97706;
+    --green: #34d399;
+    --red: #f87171;
+    --radius: 14px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 16px;
+  }
+  .container { max-width: 560px; margin: 0 auto; }
+  h1 {
+    text-align: center;
+    font-size: 1.5rem;
+    margin: 8px 0 2px;
+    letter-spacing: 0.5px;
+  }
+  .subtitle {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 20px;
+  }
+  .card {
+    background: var(--card);
+    border-radius: var(--radius);
+    padding: 18px;
+    margin-bottom: 16px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.25);
+  }
+  .card h2 {
+    font-size: 1.05rem;
+    margin-bottom: 12px;
+    color: var(--accent);
+  }
+  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  input[type="text"], input[type="number"] {
+    width: 100%;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: var(--card-2);
+    color: var(--text);
+    font-size: 1rem;
+    margin-bottom: 12px;
+  }
+  input:focus { outline: 2px solid var(--accent); border-color: transparent; }
+  button {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #06283d;
+    font-size: 1rem;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.1s, opacity 0.2s;
+  }
+  button:active { transform: scale(0.98); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.secondary {
+    background: var(--card-2);
+    color: var(--muted);
+    font-weight: 600;
+    margin-top: 8px;
+  }
+  button.danger { background: #7f1d1d; color: #fecaca; }
+  .hidden { display: none !important; }
+
+  /* Match screen */
+  .round-label {
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.85rem;
+    margin-bottom: 12px;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+  }
+  .teams {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: stretch;
+    margin-bottom: 14px;
+  }
+  .team {
+    background: var(--card-2);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .team .players { font-weight: 700; font-size: 0.95rem; line-height: 1.5; }
+  .vs {
+    display: flex;
+    align-items: center;
+    color: var(--muted);
+    font-weight: 800;
+    font-size: 0.9rem;
+  }
+  .score-row {
+    display: grid;
+    grid-template-columns: 1fr auto 1fr;
+    gap: 10px;
+    align-items: center;
+    margin-bottom: 6px;
+  }
+  .score-row input { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 0; }
+  .score-row .dash { text-align: center; color: var(--muted); font-weight: 800; }
+  .hint { text-align: center; color: var(--muted); font-size: 0.75rem; margin-bottom: 12px; }
+  .error-msg { text-align: center; color: var(--red); font-size: 0.8rem; margin-bottom: 10px; min-height: 1em; }
+
+  /* Leaderboard */
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    color: var(--muted);
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding: 6px 8px;
+    border-bottom: 1px solid #334155;
+  }
+  th.num, td.num { text-align: right; }
+  td { padding: 10px 8px; border-bottom: 1px solid #2b3a52; font-size: 0.95rem; }
+  tr:last-child td { border-bottom: none; }
+  .rank-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 26px; height: 26px;
+    border-radius: 50%;
+    font-weight: 800;
+    font-size: 0.8rem;
+    background: var(--card-2);
+    color: var(--muted);
+  }
+  .rank-1 { background: var(--gold); color: #422006; }
+  .rank-2 { background: var(--silver); color: #1e293b; }
+  .rank-3 { background: var(--bronze); color: #fff7ed; }
+  .pts { font-weight: 800; color: var(--accent); }
+
+  /* History */
+  .history-item {
+    background: var(--card-2);
+    border-radius: 10px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 8px;
+  }
+  .history-item .game-no { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
+  .history-item .result { flex: 1; }
+  .history-item .winner { color: var(--green); font-weight: 700; }
+  .history-score { font-weight: 800; white-space: nowrap; }
+  .empty-note { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0; }
+</style>
+</head>
+<body>
+<div class="container">
+  <h1>🎾 Puddle Game</h1>
+  <div class="subtitle">Americano · 4 players · every game to 32 points · partners shuffle each game</div>
+
+  <!-- SETUP SCREEN -->
+  <div id="setup-screen">
+    <div class="card">
+      <h2>Player names</h2>
+      <label for="p0">Player 1</label>
+      <input type="text" id="p0" placeholder="Name" maxlength="20">
+      <label for="p1">Player 2</label>
+      <input type="text" id="p1" placeholder="Name" maxlength="20">
+      <label for="p2">Player 3</label>
+      <input type="text" id="p2" placeholder="Name" maxlength="20">
+      <label for="p3">Player 4</label>
+      <input type="text" id="p3" placeholder="Name" maxlength="20">
+      <div class="error-msg" id="setup-error"></div>
+      <button onclick="startTournament()">Start tournament</button>
+    </div>
+  </div>
+
+  <!-- GAME SCREEN -->
+  <div id="game-screen" class="hidden">
+    <div class="card">
+      <div class="round-label" id="round-label">Game 1</div>
+      <div class="teams">
+        <div class="team"><div class="players" id="teamA-names"></div></div>
+        <div class="vs">VS</div>
+        <div class="team"><div class="players" id="teamB-names"></div></div>
+      </div>
+      <div class="score-row">
+        <input type="number" id="scoreA" min="0" max="32" inputmode="numeric" placeholder="0" oninput="autoFill('A')">
+        <div class="dash">—</div>
+        <input type="number" id="scoreB" min="0" max="32" inputmode="numeric" placeholder="0" oninput="autoFill('B')">
+      </div>
+      <div class="hint">Scores of both teams must add up to 32</div>
+      <div class="error-msg" id="score-error"></div>
+      <button onclick="saveGame()">Save game &amp; shuffle players</button>
+    </div>
+
+    <div class="card">
+      <h2>🏆 Ranking</h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th>Player</th><th class="num">Points</th><th class="num">Games</th><th class="num">Won</th></tr>
+        </thead>
+        <tbody id="leaderboard-body"></tbody>
+      </table>
+    </div>
+
+    <div class="card">
+      <h2>📋 Game history</h2>
+      <div id="history-list"><div class="empty-note">No games played yet</div></div>
+    </div>
+
+    <button class="secondary danger" onclick="resetTournament()">Reset tournament</button>
+  </div>
+</div>
+
+<script>
+const GAME_TARGET = 32;
+const STORAGE_KEY = 'puddle-game-state-v1';
+
+// The 3 unique team pairings possible with 4 players (indices into players array).
+const PAIRINGS = [
+  [[0, 1], [2, 3]],
+  [[0, 2], [1, 3]],
+  [[0, 3], [1, 2]],
+];
+
+let state = null;
+
+function defaultState(players) {
+  return {
+    players: players,                 // [name, name, name, name]
+    points: [0, 0, 0, 0],             // cumulative points per player
+    gamesPlayed: [0, 0, 0, 0],
+    gamesWon: [0, 0, 0, 0],
+    history: [],                      // {teamA:[i,i], teamB:[i,i], scoreA, scoreB}
+    pairingOrder: shuffledPairingOrder(),
+    pairingCursor: 0,
+  };
+}
+
+function shuffledPairingOrder() {
+  const order = [0, 1, 2];
+  for (let i = order.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [order[i], order[j]] = [order[j], order[i]];
+  }
+  return order;
+}
+
+function currentPairing() {
+  return PAIRINGS[state.pairingOrder[state.pairingCursor]];
+}
+
+function advancePairing() {
+  state.pairingCursor++;
+  // After all 3 pairings have been played, reshuffle the cycle.
+  if (state.pairingCursor >= state.pairingOrder.length) {
+    state.pairingOrder = shuffledPairingOrder();
+    state.pairingCursor = 0;
+  }
+}
+
+function save() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+}
+
+function load() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) state = JSON.parse(raw);
+  } catch (e) { state = null; }
+}
+
+function startTournament() {
+  const names = [0, 1, 2, 3].map(i => document.getElementById('p' + i).value.trim());
+  const err = document.getElementById('setup-error');
+  if (names.some(n => !n)) {
+    err.textContent = 'Please enter all four player names.';
+    return;
+  }
+  const unique = new Set(names.map(n => n.toLowerCase()));
+  if (unique.size < 4) {
+    err.textContent = 'Player names must be different from each other.';
+    return;
+  }
+  err.textContent = '';
+  state = defaultState(names);
+  save();
+  render();
+}
+
+function autoFill(side) {
+  // When one team's score is typed, fill the other side with (32 - score).
+  const a = document.getElementById('scoreA');
+  const b = document.getElementById('scoreB');
+  const src = side === 'A' ? a : b;
+  const dst = side === 'A' ? b : a;
+  const v = parseInt(src.value, 10);
+  if (!isNaN(v) && v >= 0 && v <= GAME_TARGET) {
+    dst.value = GAME_TARGET - v;
+  }
+  document.getElementById('score-error').textContent = '';
+}
+
+function saveGame() {
+  const scoreA = parseInt(document.getElementById('scoreA').value, 10);
+  const scoreB = parseInt(document.getElementById('scoreB').value, 10);
+  const err = document.getElementById('score-error');
+
+  if (isNaN(scoreA) || isNaN(scoreB)) {
+    err.textContent = 'Enter the score for the game.';
+    return;
+  }
+  if (scoreA < 0 || scoreB < 0 || scoreA > GAME_TARGET || scoreB > GAME_TARGET) {
+    err.textContent = 'Scores must be between 0 and ' + GAME_TARGET + '.';
+    return;
+  }
+  if (scoreA + scoreB !== GAME_TARGET) {
+    err.textContent = 'The two scores must add up to exactly ' + GAME_TARGET + '.';
+    return;
+  }
+  err.textContent = '';
+
+  const [teamA, teamB] = currentPairing();
+  teamA.forEach(i => { state.points[i] += scoreA; state.gamesPlayed[i]++; });
+  teamB.forEach(i => { state.points[i] += scoreB; state.gamesPlayed[i]++; });
+  if (scoreA > scoreB) teamA.forEach(i => state.gamesWon[i]++);
+  else if (scoreB > scoreA) teamB.forEach(i => state.gamesWon[i]++);
+
+  state.history.push({ teamA: [...teamA], teamB: [...teamB], scoreA, scoreB });
+  advancePairing();
+  save();
+
+  document.getElementById('scoreA').value = '';
+  document.getElementById('scoreB').value = '';
+  render();
+}
+
+function resetTournament() {
+  if (!confirm('Reset the tournament? All scores and history will be lost.')) return;
+  state = null;
+  localStorage.removeItem(STORAGE_KEY);
+  render();
+}
+
+function teamLabel(team) {
+  return team.map(i => state.players[i]).join('<br>');
+}
+
+function teamLabelInline(team) {
+  return team.map(i => state.players[i]).join(' & ');
+}
+
+function renderLeaderboard() {
+  // Rank by points; tie-break by games won, then fewer games played.
+  const order = [0, 1, 2, 3].sort((x, y) =>
+    state.points[y] - state.points[x] ||
+    state.gamesWon[y] - state.gamesWon[x] ||
+    state.gamesPlayed[x] - state.gamesPlayed[y]
+  );
+  const tbody = document.getElementById('leaderboard-body');
+  tbody.innerHTML = '';
+  let prevKey = null, prevRank = 0;
+  order.forEach((i, idx) => {
+    const key = state.points[i] + '/' + state.gamesWon[i];
+    const rank = key === prevKey ? prevRank : idx + 1;
+    prevKey = key; prevRank = rank;
+    const tr = document.createElement('tr');
+    tr.innerHTML =
+      '<td><span class="rank-badge rank-' + rank + '">' + rank + '</span></td>' +
+      '<td>' + escapeHtml(state.players[i]) + '</td>' +
+      '<td class="num pts">' + state.points[i] + '</td>' +
+      '<td class="num">' + state.gamesPlayed[i] + '</td>' +
+      '<td class="num">' + state.gamesWon[i] + '</td>';
+    tbody.appendChild(tr);
+  });
+}
+
+function renderHistory() {
+  const list = document.getElementById('history-list');
+  if (state.history.length === 0) {
+    list.innerHTML = '<div class="empty-note">No games played yet</div>';
+    return;
+  }
+  list.innerHTML = '';
+  [...state.history].reverse().forEach((g, revIdx) => {
+    const gameNo = state.history.length - revIdx;
+    const aWins = g.scoreA > g.scoreB;
+    const bWins = g.scoreB > g.scoreA;
+    const div = document.createElement('div');
+    div.className = 'history-item';
+    div.innerHTML =
+      '<span class="game-no">#' + gameNo + '</span>' +
+      '<span class="result">' +
+        '<span class="' + (aWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(g.teamA)) + '</span>' +
+        ' vs ' +
+        '<span class="' + (bWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(g.teamB)) + '</span>' +
+      '</span>' +
+      '<span class="history-score">' + g.scoreA + '–' + g.scoreB + '</span>';
+    list.appendChild(div);
+  });
+}
+
+function escapeHtml(s) {
+  return s.replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+
+function render() {
+  const setup = document.getElementById('setup-screen');
+  const game = document.getElementById('game-screen');
+  if (!state) {
+    setup.classList.remove('hidden');
+    game.classList.add('hidden');
+    return;
+  }
+  setup.classList.add('hidden');
+  game.classList.remove('hidden');
+
+  document.getElementById('round-label').textContent = 'Game ' + (state.history.length + 1);
+  const [teamA, teamB] = currentPairing();
+  document.getElementById('teamA-names').innerHTML = teamLabel(teamA);
+  document.getElementById('teamB-names').innerHTML = teamLabel(teamB);
+
+  renderLeaderboard();
+  renderHistory();
+}
+
+load();
+render();
+</script>
+</body>
+</html>
