@@ -1,17 +1,19 @@
 # 🎾 פאדלז׳יט — puddlezit
 
-A score-keeping app for 4-player padel Americano tournaments. Hebrew (RTL) by default, with a one-tap English toggle. No signup needed — open and play.
+A score-keeping app for padel Americano tournaments with 4–8 players. Hebrew (RTL) by default, with a one-tap English toggle. No signup needed — open and play.
 
 ## Features
 
 - **Multi-tournament home screen** — start a new tournament, continue a live one, or revisit finished ones. Player names are remembered between tournaments.
-- **4 players, shuffled pairs** — with 4 players there are 3 possible team combinations; the app cycles through all of them in random order before reshuffling (never repeating the same pairing twice in a row), so everyone partners with everyone. The round/cycle position is shown ("Game 4 · Round 2 (1/3)").
+- **4–8 players, shuffled pairs** — with more than 4 players, the 4 with the fewest games play each game (partners chosen to minimize repeats) and the rest rest, so playing time stays even.
+- **With exactly 4 players** — with 4 players there are 3 possible team combinations; the app cycles through all of them in random order before reshuffling (never repeating the same pairing twice in a row), so everyone partners with everyone. The round/cycle position is shown ("Game 4 · Round 2 (1/3)").
 - **Games to a configurable total** (default 32 points) — type one team's score and the other fills in automatically. The 🎯 target can be changed mid-tournament; each game remembers the target it was played to.
 - **Live ranking** — points, point differential (+/−) and wins per player; ties broken by wins, then differential.
 - **Editable history** — fix any past game's score (✎); standings recompute instantly.
 - **Finish & podium** — crown the winner with a 🥇🥈🥉 podium and final table.
 - **Share on WhatsApp** — send the standings to friends with one tap (or copy as text).
 - **All-time leaderboard** — aggregated points, wins and 🏆 titles across all tournaments, saved on the device.
+- **Backup & transfer** — copy a backup code on one device, paste it on another; tournaments merge safely.
 - Robust storage: corrupted/legacy saves are sanitized, multiple open tabs stay in sync, and the app still works where localStorage is blocked (memory fallback).
 
 ## Running it
@@ -29,7 +31,7 @@ Works well on a phone at the court.
 
 ## Roadmap
 
-- More than 4 players (5–8 with resting rotation), Mexicano mode (pairs by standings)
+- Mexicano mode (pairs by standings)
 - Accounts (email / Google / Facebook) with cross-device sync
 - Shared online tournaments: register via a link, live leaderboard for the whole group
 

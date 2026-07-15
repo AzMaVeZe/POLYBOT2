@@ -308,6 +308,38 @@
   .podium-rest .score { color: var(--muted); font-size: 0.85rem; }
   #share-fallback { width: 100%; min-height: 120px; margin-top: 10px; border-radius: 10px; border: 1px solid #334155; background: var(--card-2); color: var(--text); padding: 10px; font-size: 0.85rem; }
 
+  /* Player-count chips */
+  .count-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .count-chip {
+    width: auto;
+    flex: 1;
+    padding: 12px 0;
+    background: var(--card-2);
+    color: var(--muted);
+    font-weight: 800;
+    font-size: 1rem;
+  }
+  .count-chip.sel {
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #06283d;
+  }
+  #resting-label { text-align: center; color: var(--muted); font-size: 0.85rem; margin: -4px 0 12px; }
+
+  /* Backup / restore */
+  #backup-box, #import-box {
+    width: 100%;
+    min-height: 90px;
+    margin-top: 10px;
+    border-radius: 10px;
+    border: 1px solid #334155;
+    background: var(--card-2);
+    color: var(--text);
+    padding: 10px;
+    font-size: 0.8rem;
+    font-family: monospace;
+  }
+  #import-area button { margin-top: 8px; }
+
   /* Toast */
   #toast {
     position: fixed;
@@ -347,6 +379,17 @@
       <h2 id="tours-title"></h2>
       <div id="tournament-list"></div>
     </div>
+    <div class="card">
+      <h2 id="backup-title"></h2>
+      <button type="button" class="secondary" onclick="exportBackup()" id="export-btn" style="margin-top:0"></button>
+      <textarea id="backup-box" class="hidden" readonly></textarea>
+      <button type="button" class="secondary" onclick="toggleImport()" id="import-btn"></button>
+      <div id="import-area" class="hidden">
+        <textarea id="import-box"></textarea>
+        <button type="button" onclick="importBackup()" id="import-go"></button>
+      </div>
+      <div class="error-msg" id="backup-error" role="alert"></div>
+    </div>
     <div class="card" id="alltime-card">
       <h2 id="alltime-title"></h2>
       <table>
@@ -363,14 +406,9 @@
     <div class="card">
       <h2 id="setup-title"></h2>
       <form id="setup-form">
-        <label for="p0" id="lp0"></label>
-        <input type="text" id="p0" maxlength="20" autocomplete="off" enterkeyhint="next">
-        <label for="p1" id="lp1"></label>
-        <input type="text" id="p1" maxlength="20" autocomplete="off" enterkeyhint="next">
-        <label for="p2" id="lp2"></label>
-        <input type="text" id="p2" maxlength="20" autocomplete="off" enterkeyhint="next">
-        <label for="p3" id="lp3"></label>
-        <input type="text" id="p3" maxlength="20" autocomplete="off" enterkeyhint="next">
+        <label id="lcount"></label>
+        <div class="count-row" id="count-row"></div>
+        <div id="name-fields"></div>
         <label for="target" id="ltarget"></label>
         <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric" enterkeyhint="go">
         <div class="error-msg" id="setup-error" role="alert"></div>
@@ -393,6 +431,7 @@
         <div class="vs" id="vs-label"></div>
         <div class="team"><div class="players" id="teamB-names"></div></div>
       </div>
+      <div id="resting-label" class="hidden"></div>
       <div class="score-row">
         <input type="number" id="scoreA" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('A')">
         <div class="dash">—</div>
@@ -407,7 +446,7 @@
       <h2 id="ranking-title"></h2>
       <table>
         <thead>
-          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff">+/-</th><th class="num" id="th-won"></th></tr>
+          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff">+/-</th><th class="num" id="th-won"></th><th class="num" id="th-games"></th></tr>
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
@@ -447,7 +486,7 @@
       <h2 id="final-title"></h2>
       <table>
         <thead>
-          <tr><th>#</th><th id="fth-player"></th><th class="num" id="fth-points"></th><th class="num" id="fth-diff">+/-</th><th class="num" id="fth-won"></th></tr>
+          <tr><th>#</th><th id="fth-player"></th><th class="num" id="fth-points"></th><th class="num" id="fth-diff">+/-</th><th class="num" id="fth-won"></th><th class="num" id="fth-games"></th></tr>
         </thead>
         <tbody id="final-body"></tbody>
       </table>
@@ -505,12 +544,14 @@ const STR = {
     alltime: '🏅 טבלת האלופים (כל הטורנירים)',
     athPlayer: 'שחקן', athTitles: '🏆', athPoints: 'נקודות', athGames: 'משחקים', athWon: 'ניצחונות',
     setupTitle: 'שמות השחקנים',
+    countLabel: 'מספר שחקנים (4 משחקים בכל רגע, השאר נחים)',
+    resting: '😴 נחים במשחק הזה',
     player: 'שחקן',
     namePh: 'שם',
     targetLabel: 'ניקוד לכל משחק (סך הנקודות של שתי הקבוצות)',
     start: 'התחלת טורניר',
     back: 'חזרה',
-    errNames: 'נא להזין את כל ארבעת השמות.',
+    errNames: 'נא להזין את השמות של כל השחקנים.',
     errUnique: 'השמות חייבים להיות שונים זה מזה.',
     errTarget: 'ניקוד המשחק חייב להיות מספר בין 2 ל־500.',
     game: 'משחק',
@@ -524,7 +565,14 @@ const STR = {
     saveGame: 'שמירת משחק וערבוב שחקנים',
     savedToast: 'משחק {n} נשמר ✓',
     ranking: '🏆 דירוג',
-    thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'ניצחונות',
+    thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'נצ׳', thGames: 'מש׳',
+    backupTitle: '💾 גיבוי והעברה בין מכשירים',
+    exportBtn: 'העתקת קוד גיבוי',
+    importBtn: 'שחזור מקוד גיבוי',
+    importGo: 'שחזור',
+    importPh: 'הדביקו כאן את קוד הגיבוי…',
+    imported: '{n} טורנירים שוחזרו ✓',
+    importErr: 'קוד הגיבוי לא תקין.',
     history: '📋 היסטוריית משחקים',
     empty: 'עוד לא שוחקו משחקים',
     editTitle: 'עריכת התוצאה',
@@ -571,12 +619,14 @@ const STR = {
     alltime: '🏅 All-time leaderboard (all tournaments)',
     athPlayer: 'Player', athTitles: '🏆', athPoints: 'Points', athGames: 'Games', athWon: 'Won',
     setupTitle: 'Player names',
+    countLabel: 'Number of players (4 on court, the rest rest)',
+    resting: '😴 Resting this game',
     player: 'Player',
     namePh: 'Name',
     targetLabel: 'Points per game (both teams combined)',
     start: 'Start tournament',
     back: 'Back',
-    errNames: 'Please enter all four player names.',
+    errNames: 'Please enter a name for every player.',
     errUnique: 'Player names must be different from each other.',
     errTarget: 'Points per game must be a number between 2 and 500.',
     game: 'Game',
@@ -590,7 +640,14 @@ const STR = {
     saveGame: 'Save game & shuffle players',
     savedToast: 'Game {n} saved ✓',
     ranking: '🏆 Ranking',
-    thPlayer: 'Player', thPoints: 'Points', thWon: 'Won',
+    thPlayer: 'Player', thPoints: 'Points', thWon: 'W', thGames: 'GP',
+    backupTitle: '💾 Backup & transfer between devices',
+    exportBtn: 'Copy backup code',
+    importBtn: 'Restore from backup code',
+    importGo: 'Restore',
+    importPh: 'Paste the backup code here…',
+    imported: '{n} tournaments restored ✓',
+    importErr: 'Invalid backup code.',
     history: '📋 Game history',
     empty: 'No games played yet',
     editTitle: 'Edit score',
@@ -654,18 +711,22 @@ function saveDb() {
 // Repairs missing/out-of-range pairing state and recomputes all totals from history.
 function sanitizeTournament(x) {
   if (!x || typeof x !== 'object') return null;
-  if (!Array.isArray(x.players) || x.players.length !== 4 ||
+  if (!Array.isArray(x.players) || x.players.length < 4 || x.players.length > 8 ||
       x.players.some(p => typeof p !== 'string' || !p.trim())) return null;
+  const n = x.players.length;
   const target = (Number.isInteger(x.target) && x.target >= 2 && x.target <= 500) ? x.target : 32;
   const tour = newTournamentObj(x.players.slice(), target);
   if (typeof x.id === 'string' && x.id) tour.id = x.id;
   if (Number.isInteger(x.createdAt)) tour.createdAt = x.createdAt;
   tour.finished = !!x.finished;
   tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
+  const validTeams = g => {
+    const all = [...g.teamA, ...g.teamB];
+    return all.every(i => Number.isInteger(i) && i >= 0 && i < n) && new Set(all).size === 4;
+  };
   tour.history = (Array.isArray(x.history) ? x.history : [])
     .filter(g => g && Array.isArray(g.teamA) && Array.isArray(g.teamB) &&
-      g.teamA.length === 2 && g.teamB.length === 2 &&
-      [...g.teamA, ...g.teamB].slice().sort().join(',') === '0,1,2,3' &&
+      g.teamA.length === 2 && g.teamB.length === 2 && validTeams(g) &&
       Number.isInteger(g.scoreA) && Number.isInteger(g.scoreB) && g.scoreA >= 0 && g.scoreB >= 0)
     .map(g => ({
       teamA: g.teamA.slice(), teamB: g.teamB.slice(),
@@ -679,6 +740,11 @@ function sanitizeTournament(x) {
     tour.pairingCursor = x.pairingCursor;
   }
   recompute(tour);
+  const nextOk = x.next && Array.isArray(x.next) && x.next.length === 2 &&
+    Array.isArray(x.next[0]) && Array.isArray(x.next[1]) &&
+    x.next[0].length === 2 && x.next[1].length === 2 &&
+    validTeams({ teamA: x.next[0], teamB: x.next[1] });
+  tour.next = nextOk ? [x.next[0].slice(), x.next[1].slice()] : computeNext(tour);
   return tour;
 }
 
@@ -690,7 +756,7 @@ function loadDb() {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tournaments)) {
         db.tournaments = parsed.tournaments.map(sanitizeTournament).filter(Boolean);
-        if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length === 4) db.lastPlayers = parsed.lastPlayers;
+        if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length >= 4 && parsed.lastPlayers.length <= 8) db.lastPlayers = parsed.lastPlayers;
         if (Number.isInteger(parsed.lastTarget)) db.lastTarget = parsed.lastTarget;
       }
     }
@@ -712,45 +778,85 @@ function loadDb() {
 }
 
 function newTournamentObj(players, targetPoints) {
-  return {
+  const n = players.length;
+  const tour = {
     id: 'T' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
     createdAt: Date.now(),
     finished: false,
     finishedAt: null,
     players: players,
     target: targetPoints,
-    points: [0, 0, 0, 0],
-    gamesPlayed: [0, 0, 0, 0],
-    gamesWon: [0, 0, 0, 0],
+    points: new Array(n).fill(0),
+    gamesPlayed: new Array(n).fill(0),
+    gamesWon: new Array(n).fill(0),
     history: [],               // {teamA:[i,i], teamB:[i,i], scoreA, scoreB, target}
-    pairingOrder: shuffledPairingOrder(),
+    pairingOrder: shuffledPairingOrder(),   // used only with exactly 4 players
     pairingCursor: 0,
+    next: null,                // the upcoming pairing [[i,i],[i,i]]
   };
+  tour.next = computeNext(tour);
+  return tour;
+}
+
+function shuffleArr(a) {
+  for (let i = a.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [a[i], a[j]] = [a[j], a[i]];
+  }
+  return a;
 }
 
 function shuffledPairingOrder(avoidFirst) {
   let order;
   do {
-    order = [0, 1, 2];
-    for (let i = order.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [order[i], order[j]] = [order[j], order[i]];
-    }
+    order = shuffleArr([0, 1, 2]);
   } while (avoidFirst !== undefined && order[0] === avoidFirst);
   return order;
 }
 
-function currentPairing(tour) {
-  return PAIRINGS[tour.pairingOrder[tour.pairingCursor]];
+function partnerCount(tour, x, y) {
+  return tour.history.filter(g =>
+    (g.teamA.includes(x) && g.teamA.includes(y)) ||
+    (g.teamB.includes(x) && g.teamB.includes(y))).length;
 }
 
-function advancePairing(tour) {
-  tour.pairingCursor++;
-  if (tour.pairingCursor >= tour.pairingOrder.length) {
-    // Reshuffle for the next cycle, never repeating the pairing just played.
-    tour.pairingOrder = shuffledPairingOrder(tour.pairingOrder[tour.pairingOrder.length - 1]);
-    tour.pairingCursor = 0;
+// Pick the next pairing. With 4 players: the classic 3-pairing cycle.
+// With 5-8 players: the 4 with fewest games play (random among ties),
+// paired to minimize repeat partnerships; the rest sit out this game.
+function computeNext(tour) {
+  const n = tour.players.length;
+  if (n === 4) {
+    const p = PAIRINGS[tour.pairingOrder[tour.pairingCursor]];
+    return [p[0].slice(), p[1].slice()];
   }
+  const idx = shuffleArr([...Array(n).keys()]);
+  idx.sort((a, b) => tour.gamesPlayed[a] - tour.gamesPlayed[b]);
+  const four = idx.slice(0, 4);
+  const opts = shuffleArr([
+    [[four[0], four[1]], [four[2], four[3]]],
+    [[four[0], four[2]], [four[1], four[3]]],
+    [[four[0], four[3]], [four[1], four[2]]],
+  ]);
+  opts.sort((p, q) =>
+    (partnerCount(tour, p[0][0], p[0][1]) + partnerCount(tour, p[1][0], p[1][1])) -
+    (partnerCount(tour, q[0][0], q[0][1]) + partnerCount(tour, q[1][0], q[1][1])));
+  return opts[0];
+}
+
+function currentPairing(tour) {
+  return tour.next;
+}
+
+function advanceAfterSave(tour) {
+  if (tour.players.length === 4) {
+    tour.pairingCursor++;
+    if (tour.pairingCursor >= tour.pairingOrder.length) {
+      // Reshuffle for the next cycle, never repeating the pairing just played.
+      tour.pairingOrder = shuffledPairingOrder(tour.pairingOrder[tour.pairingOrder.length - 1]);
+      tour.pairingCursor = 0;
+    }
+  }
+  tour.next = computeNext(tour);
 }
 
 /* ---------- language ---------- */
@@ -775,10 +881,7 @@ function applyLang() {
   set('ath-player', 'athPlayer'); set('ath-titles', 'athTitles'); set('ath-points', 'athPoints');
   set('ath-games', 'athGames'); set('ath-won', 'athWon');
   set('setup-title', 'setupTitle');
-  for (let i = 0; i < 4; i++) {
-    document.getElementById('lp' + i).textContent = t('player') + ' ' + (i + 1);
-    document.getElementById('p' + i).placeholder = t('namePh');
-  }
+  set('lcount', 'countLabel');
   set('ltarget', 'targetLabel');
   set('start-btn', 'start');
   set('setup-back-btn', 'back');
@@ -786,7 +889,7 @@ function applyLang() {
   set('vs-label', 'vs');
   set('save-btn', 'saveGame');
   set('ranking-title', 'ranking');
-  set('th-player', 'thPlayer'); set('th-points', 'thPoints'); set('th-won', 'thWon');
+  set('th-player', 'thPlayer'); set('th-points', 'thPoints'); set('th-won', 'thWon'); set('th-games', 'thGames');
   set('history-title', 'history');
   set('finish-btn', 'finish');
   set('finish-yes', 'finishYes');
@@ -794,25 +897,75 @@ function applyLang() {
   set('game-home-btn', 'home');
   set('podium-title', 'podium');
   set('final-title', 'finalTable');
-  set('fth-player', 'thPlayer'); set('fth-points', 'thPoints'); set('fth-won', 'thWon');
+  set('fth-player', 'thPlayer'); set('fth-points', 'thPoints'); set('fth-won', 'thWon'); set('fth-games', 'thGames');
   set('share-title', 'shareTitle');
   set('wa-link', 'waShare');
   set('copy-btn', 'copy');
   set('rematch-btn', 'rematch');
   set('resume-btn', 'resume');
   set('podium-home-btn', 'home');
+  set('backup-title', 'backupTitle');
+  set('export-btn', 'exportBtn');
+  set('import-btn', 'importBtn');
+  set('import-go', 'importGo');
+  document.getElementById('import-box').placeholder = t('importPh');
 }
 
 /* ---------- navigation ---------- */
 
 function gotoHome() { view = 'home'; activeId = null; editingIndex = -1; render(); }
+
+let setupCount = 4;
+let pendingNames = null;
+
 function gotoSetup() {
   view = 'setup';
-  const names = db.lastPlayers || ['', '', '', ''];
-  for (let i = 0; i < 4; i++) document.getElementById('p' + i).value = names[i] || '';
+  const last = Array.isArray(db.lastPlayers) ? db.lastPlayers : [];
+  setupCount = (last.length >= 4 && last.length <= 8) ? last.length : 4;
+  pendingNames = last.slice();
   document.getElementById('target').value = db.lastTarget || 32;
   document.getElementById('setup-error').textContent = '';
   render();
+}
+
+function selectCount(n) {
+  setupCount = n;
+  renderSetup();
+}
+
+// Rebuild the count chips + name inputs, preserving anything already typed.
+function renderSetup() {
+  const row = document.getElementById('count-row');
+  row.innerHTML = '';
+  for (let n = 4; n <= 8; n++) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'count-chip' + (n === setupCount ? ' sel' : '');
+    b.textContent = n;
+    b.onclick = () => selectCount(n);
+    row.appendChild(b);
+  }
+  const fields = document.getElementById('name-fields');
+  const prev = pendingNames !== null
+    ? pendingNames
+    : [...fields.querySelectorAll('input')].map(i => i.value);
+  pendingNames = null;
+  fields.innerHTML = '';
+  for (let i = 0; i < setupCount; i++) {
+    const lab = document.createElement('label');
+    lab.htmlFor = 'p' + i;
+    lab.textContent = t('player') + ' ' + (i + 1);
+    const inp = document.createElement('input');
+    inp.type = 'text';
+    inp.id = 'p' + i;
+    inp.maxLength = 20;
+    inp.autocomplete = 'off';
+    inp.setAttribute('enterkeyhint', 'next');
+    inp.placeholder = t('namePh');
+    inp.value = prev[i] || '';
+    fields.appendChild(lab);
+    fields.appendChild(inp);
+  }
 }
 function openTournament(id) {
   activeId = id;
@@ -825,11 +978,12 @@ function openTournament(id) {
 /* ---------- setup ---------- */
 
 function startTournament() {
-  const names = [0, 1, 2, 3].map(i => document.getElementById('p' + i).value.trim());
+  const names = [];
+  for (let i = 0; i < setupCount; i++) names.push(document.getElementById('p' + i).value.trim());
   const err = document.getElementById('setup-error');
   if (names.some(n => !n)) { err.textContent = t('errNames'); return; }
   const unique = new Set(names.map(n => n.toLowerCase()));
-  if (unique.size < 4) { err.textContent = t('errUnique'); return; }
+  if (unique.size < names.length) { err.textContent = t('errUnique'); return; }
   const targetPoints = parseScore(document.getElementById('target').value);
   if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) { err.textContent = t('errTarget'); return; }
   err.textContent = '';
@@ -904,9 +1058,10 @@ function applyGame(tour, g) {
 }
 
 function recompute(tour) {
-  tour.points = [0, 0, 0, 0];
-  tour.gamesPlayed = [0, 0, 0, 0];
-  tour.gamesWon = [0, 0, 0, 0];
+  const n = tour.players.length;
+  tour.points = new Array(n).fill(0);
+  tour.gamesPlayed = new Array(n).fill(0);
+  tour.gamesWon = new Array(n).fill(0);
   tour.history.forEach(g => applyGame(tour, g));
 }
 
@@ -921,7 +1076,7 @@ function diffOf(tour, i) {
 }
 
 function rankOrder(tour) {
-  return [0, 1, 2, 3].sort((x, y) =>
+  return [...Array(tour.players.length).keys()].sort((x, y) =>
     tour.points[y] - tour.points[x] ||
     tour.gamesWon[y] - tour.gamesWon[x] ||
     diffOf(tour, y) - diffOf(tour, x)
@@ -948,7 +1103,7 @@ function saveGame() {
   const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB, target: tour.target };
   applyGame(tour, game);
   tour.history.push(game);
-  advancePairing(tour);
+  advanceAfterSave(tour);
   lastSaveAt = Date.now();
   saveDb();
 
@@ -1099,6 +1254,57 @@ function copyResults() {
   }
 }
 
+/* ---------- backup / restore ---------- */
+
+function exportBackup() {
+  const text = JSON.stringify(db);
+  const box = document.getElementById('backup-box');
+  const showBox = () => {
+    box.value = text;
+    box.classList.remove('hidden');
+    box.focus(); box.select();
+    showToast(t('copyManual'));
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => {
+      box.classList.add('hidden');
+      showToast(t('copied'));
+    }).catch(showBox);
+  } else {
+    showBox();
+  }
+}
+
+function toggleImport() {
+  document.getElementById('import-area').classList.toggle('hidden');
+  document.getElementById('backup-error').textContent = '';
+}
+
+function importBackup() {
+  const err = document.getElementById('backup-error');
+  err.textContent = '';
+  try {
+    const parsed = JSON.parse(document.getElementById('import-box').value);
+    const arr = Array.isArray(parsed) ? parsed
+      : (parsed && Array.isArray(parsed.tournaments)) ? parsed.tournaments : null;
+    if (!arr) throw new Error('bad');
+    const clean = arr.map(sanitizeTournament).filter(Boolean);
+    if (clean.length === 0) throw new Error('bad');
+    clean.forEach(tour => {
+      const at = db.tournaments.findIndex(x => x.id === tour.id);
+      if (at >= 0) db.tournaments[at] = tour; else db.tournaments.push(tour);
+    });
+    db.tournaments.sort((a, b) => b.createdAt - a.createdAt);
+    saveDb();
+    document.getElementById('import-box').value = '';
+    document.getElementById('import-area').classList.add('hidden');
+    render();
+    showToast(t('imported', clean.length));
+  } catch (e) {
+    err.textContent = t('importErr');
+  }
+}
+
 /* ---------- toast ---------- */
 
 function showToast(msg) {
@@ -1142,7 +1348,8 @@ function renderLeaderboardInto(tbodyId, tour) {
       '<td>' + escapeHtml(tour.players[i]) + '</td>' +
       '<td class="num pts">' + tour.points[i] + '</td>' +
       '<td class="num diff ' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '">' + (d > 0 ? '+' : '') + d + '</td>' +
-      '<td class="num">' + tour.gamesWon[i] + '</td>';
+      '<td class="num">' + tour.gamesWon[i] + '</td>' +
+      '<td class="num">' + tour.gamesPlayed[i] + '</td>';
     tbody.appendChild(tr);
   });
 }
@@ -1198,10 +1405,14 @@ function renderHistory(tour) {
 
 function renderGame(tour) {
   const n = tour.history.length;
-  const round = Math.floor(n / 3) + 1;
-  const inRound = (n % 3) + 1;
-  document.getElementById('round-label').textContent =
-    t('game') + ' ' + (n + 1) + ' · ' + t('round') + ' ' + round + ' (' + inRound + '/3)';
+  const nPlayers = tour.players.length;
+  let label = t('game') + ' ' + (n + 1);
+  if (nPlayers === 4) {
+    const round = Math.floor(n / 3) + 1;
+    const inRound = (n % 3) + 1;
+    label += ' · ' + t('round') + ' ' + round + ' (' + inRound + '/3)';
+  }
+  document.getElementById('round-label').textContent = label;
   document.getElementById('game-target').value = tour.target;
   document.getElementById('sum-hint').textContent = t('sumHint', tour.target);
   const [teamA, teamB] = currentPairing(tour);
@@ -1209,6 +1420,15 @@ function renderGame(tour) {
   document.getElementById('teamB-names').innerHTML = teamLabel(tour, teamB);
   document.getElementById('scoreA').setAttribute('aria-label', teamLabelInline(tour, teamA));
   document.getElementById('scoreB').setAttribute('aria-label', teamLabelInline(tour, teamB));
+  const restEl = document.getElementById('resting-label');
+  const onCourt = new Set([...teamA, ...teamB]);
+  const resting = [...Array(nPlayers).keys()].filter(i => !onCourt.has(i));
+  if (resting.length > 0) {
+    restEl.textContent = t('resting') + ': ' + resting.map(i => tour.players[i]).join(', ');
+    restEl.classList.remove('hidden');
+  } else {
+    restEl.classList.add('hidden');
+  }
   renderLeaderboardInto('leaderboard-body', tour);
   renderHistory(tour);
 }
@@ -1305,6 +1525,7 @@ function render() {
   if ((view === 'game' || view === 'podium') && !tour) view = 'home';
   document.getElementById(screens[view]).classList.remove('hidden');
   if (view === 'home') renderHome();
+  else if (view === 'setup') renderSetup();
   else if (view === 'game') renderGame(tour);
   else if (view === 'podium') renderPodium(tour);
 }
