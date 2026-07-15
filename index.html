@@ -221,6 +221,12 @@
   .edit-row .icon-btn.cancel { background: #450a0a; color: #fecaca; }
   .edit-error { width: 100%; color: var(--red); font-size: 0.75rem; }
   .empty-note { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0; }
+
+  /* Inline reset confirmation (browser confirm() is blocked in sandboxed pages) */
+  #reset-confirm { margin-top: 10px; }
+  #reset-confirm .error-msg { margin-bottom: 8px; }
+  .confirm-row { display: flex; gap: 8px; }
+  .confirm-row button { margin-top: 0; }
 </style>
 </head>
 <body>
@@ -288,7 +294,14 @@
       <div id="history-list"></div>
     </div>
 
-    <button class="secondary danger" onclick="resetTournament()" id="reset-btn"></button>
+    <button class="secondary danger" onclick="askReset()" id="reset-btn"></button>
+    <div id="reset-confirm" class="hidden">
+      <div class="error-msg" id="reset-question"></div>
+      <div class="confirm-row">
+        <button class="danger" onclick="resetTournament()" id="reset-yes"></button>
+        <button class="secondary" onclick="cancelReset()" id="reset-no"></button>
+      </div>
+    </div>
   </div>
 </div>
 
@@ -322,6 +335,8 @@ const STR = {
     empty: 'עוד לא שוחקו משחקים',
     reset: 'איפוס טורניר',
     confirmReset: 'לאפס את הטורניר? כל הנקודות וההיסטוריה יימחקו.',
+    resetYes: 'כן, לאפס הכול',
+    resetNo: 'ביטול',
     editTitle: 'עריכת התוצאה',
     langBtn: 'English',
     dir: 'rtl', lang: 'he',
@@ -351,6 +366,8 @@ const STR = {
     empty: 'No games played yet',
     reset: 'Reset tournament',
     confirmReset: 'Reset the tournament? All scores and history will be lost.',
+    resetYes: 'Yes, reset everything',
+    resetNo: 'Cancel',
     editTitle: 'Edit score',
     langBtn: 'עברית',
     dir: 'ltr', lang: 'en',
@@ -405,6 +422,9 @@ function applyLang() {
   document.getElementById('th-won').textContent = t('thWon');
   document.getElementById('history-title').textContent = t('history');
   document.getElementById('reset-btn').textContent = t('reset');
+  document.getElementById('reset-question').textContent = t('confirmReset');
+  document.getElementById('reset-yes').textContent = t('resetYes');
+  document.getElementById('reset-no').textContent = t('resetNo');
 }
 
 function defaultState(players, targetPoints) {
@@ -597,11 +617,21 @@ function saveEdit(index) {
   render();
 }
 
+function askReset() {
+  document.getElementById('reset-btn').classList.add('hidden');
+  document.getElementById('reset-confirm').classList.remove('hidden');
+}
+
+function cancelReset() {
+  document.getElementById('reset-confirm').classList.add('hidden');
+  document.getElementById('reset-btn').classList.remove('hidden');
+}
+
 function resetTournament() {
-  if (!confirm(t('confirmReset'))) return;
   state = null;
   editingIndex = -1;
   localStorage.removeItem(STORAGE_KEY);
+  cancelReset();
   render();
 }
 
