@@ -140,6 +140,15 @@
   .score-row input { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 0; }
   .score-row .dash { text-align: center; color: var(--muted); font-weight: 800; }
   .hint { text-align: center; color: var(--muted); font-size: 0.75rem; margin-bottom: 12px; }
+  .target-row {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .target-row label { margin-bottom: 0; font-size: 0.85rem; }
+  .target-row input { width: 84px; text-align: center; font-weight: 800; margin-bottom: 0; padding: 8px; }
   .error-msg { text-align: center; color: var(--red); font-size: 0.8rem; margin-bottom: 10px; min-height: 1em; }
 
   /* Leaderboard */
@@ -245,6 +254,10 @@
   <div id="game-screen" class="hidden">
     <div class="card">
       <div class="round-label" id="round-label"></div>
+      <div class="target-row">
+        <label for="game-target" id="lgame-target"></label>
+        <input type="number" id="game-target" min="2" max="500" inputmode="numeric" onchange="changeTarget()">
+      </div>
       <div class="teams">
         <div class="team"><div class="players" id="teamA-names"></div></div>
         <div class="vs" id="vs-label"></div>
@@ -291,6 +304,7 @@ const STR = {
     player: 'שחקן',
     namePh: 'שם',
     targetLabel: 'ניקוד לכל משחק (סך הנקודות של שתי הקבוצות)',
+    gameTargetLabel: '🎯 ניקוד למשחק:',
     start: 'התחלת טורניר',
     errNames: 'נא להזין את כל ארבעת השמות.',
     errUnique: 'השמות חייבים להיות שונים זה מזה.',
@@ -319,6 +333,7 @@ const STR = {
     player: 'Player',
     namePh: 'Name',
     targetLabel: 'Points per game (both teams combined)',
+    gameTargetLabel: '🎯 Points per game:',
     start: 'Start tournament',
     errNames: 'Please enter all four player names.',
     errUnique: 'Player names must be different from each other.',
@@ -379,6 +394,7 @@ function applyLang() {
     document.getElementById('p' + i).placeholder = t('namePh');
   }
   document.getElementById('ltarget').textContent = t('targetLabel');
+  document.getElementById('lgame-target').textContent = t('gameTargetLabel');
   document.getElementById('start-btn').textContent = t('start');
   document.getElementById('vs-label').textContent = t('vs');
   document.getElementById('save-btn').textContent = t('saveGame');
@@ -461,25 +477,50 @@ function startTournament() {
   render();
 }
 
-function autoFillPair(srcInput, dstInput) {
+// The target a specific past game was played to (falls back to the current one).
+function gameTargetOf(index) {
+  const g = state.history[index];
+  return (g && g.target) || target();
+}
+
+// Change the points-per-game target mid-tournament; applies to all games from now on.
+function changeTarget() {
+  const input = document.getElementById('game-target');
+  const v = parseInt(input.value, 10);
+  const err = document.getElementById('score-error');
+  if (isNaN(v) || v < 2 || v > 500) {
+    err.textContent = t('errTarget');
+    input.value = target();
+    return;
+  }
+  err.textContent = '';
+  state.target = v;
+  save();
+  const a = document.getElementById('scoreA');
+  const b = document.getElementById('scoreB');
+  if (a.value !== '') autoFillPair(a, b, v);
+  render();
+}
+
+function autoFillPair(srcInput, dstInput, tgt) {
   // When one team's score is typed, fill the other side with (target - score).
   const v = parseInt(srcInput.value, 10);
-  if (!isNaN(v) && v >= 0 && v <= target()) {
-    dstInput.value = target() - v;
+  if (!isNaN(v) && v >= 0 && v <= tgt) {
+    dstInput.value = tgt - v;
   }
 }
 
 function autoFill(side) {
   const a = document.getElementById('scoreA');
   const b = document.getElementById('scoreB');
-  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a);
+  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, target());
   document.getElementById('score-error').textContent = '';
 }
 
-function validScores(scoreA, scoreB) {
+function validScores(scoreA, scoreB, tgt) {
   if (isNaN(scoreA) || isNaN(scoreB)) return 'errEnter';
-  if (scoreA < 0 || scoreB < 0 || scoreA > target() || scoreB > target()) return 'errRange';
-  if (scoreA + scoreB !== target()) return 'errSum';
+  if (scoreA < 0 || scoreB < 0 || scoreA > tgt || scoreB > tgt) return 'errRange';
+  if (scoreA + scoreB !== tgt) return 'errSum';
   return null;
 }
 
@@ -503,7 +544,7 @@ function saveGame() {
   const scoreB = parseInt(document.getElementById('scoreB').value, 10);
   const err = document.getElementById('score-error');
 
-  const errKey = validScores(scoreA, scoreB);
+  const errKey = validScores(scoreA, scoreB, target());
   if (errKey) {
     err.textContent = t(errKey, target());
     return;
@@ -511,7 +552,7 @@ function saveGame() {
   err.textContent = '';
 
   const [teamA, teamB] = currentPairing();
-  const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB };
+  const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB, target: target() };
   applyGame(game);
   state.history.push(game);
   advancePairing();
@@ -535,16 +576,17 @@ function cancelEdit() {
 function editAutoFill(side) {
   const a = document.getElementById('edit-a');
   const b = document.getElementById('edit-b');
-  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a);
+  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, gameTargetOf(editingIndex));
   document.getElementById('edit-error').textContent = '';
 }
 
 function saveEdit(index) {
   const scoreA = parseInt(document.getElementById('edit-a').value, 10);
   const scoreB = parseInt(document.getElementById('edit-b').value, 10);
-  const errKey = validScores(scoreA, scoreB);
+  const tgt = gameTargetOf(index);
+  const errKey = validScores(scoreA, scoreB, tgt);
   if (errKey) {
-    document.getElementById('edit-error').textContent = t(errKey, target());
+    document.getElementById('edit-error').textContent = t(errKey, tgt);
     return;
   }
   state.history[index].scoreA = scoreA;
@@ -655,6 +697,7 @@ function render() {
   game.classList.remove('hidden');
 
   document.getElementById('round-label').textContent = t('game') + ' ' + (state.history.length + 1);
+  document.getElementById('game-target').value = target();
   document.getElementById('sum-hint').textContent = t('sumHint', target());
   const [teamA, teamB] = currentPairing();
   document.getElementById('teamA-names').innerHTML = teamLabel(teamA);
