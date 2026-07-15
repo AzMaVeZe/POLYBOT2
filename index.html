@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="he" dir="rtl">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Puddle Game — Americano Scoreboard</title>
+<title>פאדלז׳יט — PadelJit</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -29,6 +29,18 @@
     padding: 16px;
   }
   .container { max-width: 560px; margin: 0 auto; }
+  .topbar { display: flex; justify-content: flex-end; }
+  .lang-btn {
+    width: auto;
+    padding: 6px 14px;
+    border: 1px solid #334155;
+    border-radius: 999px;
+    background: var(--card);
+    color: var(--muted);
+    font-size: 0.8rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
   h1 {
     text-align: center;
     font-size: 1.5rem;
@@ -133,7 +145,7 @@
   /* Leaderboard */
   table { width: 100%; border-collapse: collapse; }
   th {
-    text-align: left;
+    text-align: start;
     color: var(--muted);
     font-size: 0.72rem;
     text-transform: uppercase;
@@ -141,7 +153,7 @@
     padding: 6px 8px;
     border-bottom: 1px solid #334155;
   }
-  th.num, td.num { text-align: right; }
+  th.num, td.num { text-align: end; }
   td { padding: 10px 8px; border-bottom: 1px solid #2b3a52; font-size: 0.95rem; }
   tr:last-child td { border-bottom: none; }
   .rank-badge {
@@ -171,77 +183,164 @@
     justify-content: space-between;
     align-items: center;
     gap: 8px;
+    flex-wrap: wrap;
   }
   .history-item .game-no { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
-  .history-item .result { flex: 1; }
+  .history-item .result { flex: 1; min-width: 140px; }
   .history-item .winner { color: var(--green); font-weight: 700; }
   .history-score { font-weight: 800; white-space: nowrap; }
+  .icon-btn {
+    width: 32px;
+    height: 32px;
+    padding: 0;
+    border-radius: 8px;
+    background: #334155;
+    color: var(--text);
+    font-size: 0.9rem;
+    flex: 0 0 auto;
+  }
+  .edit-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    margin-top: 8px;
+  }
+  .edit-row input { width: 70px; text-align: center; font-weight: 800; margin-bottom: 0; padding: 8px; }
+  .edit-row .dash { color: var(--muted); font-weight: 800; }
+  .edit-row .icon-btn.ok { background: #14532d; color: #bbf7d0; }
+  .edit-row .icon-btn.cancel { background: #450a0a; color: #fecaca; }
+  .edit-error { width: 100%; color: var(--red); font-size: 0.75rem; }
   .empty-note { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0; }
 </style>
 </head>
 <body>
 <div class="container">
-  <h1>🎾 Puddle Game</h1>
-  <div class="subtitle">Americano · 4 players · every game to 32 points · partners shuffle each game</div>
+  <div class="topbar">
+    <button type="button" class="lang-btn" id="lang-btn" onclick="toggleLang()">English</button>
+  </div>
+  <h1 id="app-title">🎾 פאדלז׳יט</h1>
+  <div class="subtitle" id="subtitle"></div>
 
   <!-- SETUP SCREEN -->
   <div id="setup-screen">
     <div class="card">
-      <h2>Player names</h2>
-      <label for="p0">Player 1</label>
-      <input type="text" id="p0" placeholder="Name" maxlength="20">
-      <label for="p1">Player 2</label>
-      <input type="text" id="p1" placeholder="Name" maxlength="20">
-      <label for="p2">Player 3</label>
-      <input type="text" id="p2" placeholder="Name" maxlength="20">
-      <label for="p3">Player 4</label>
-      <input type="text" id="p3" placeholder="Name" maxlength="20">
+      <h2 id="setup-title"></h2>
+      <label for="p0" id="lp0"></label>
+      <input type="text" id="p0" maxlength="20">
+      <label for="p1" id="lp1"></label>
+      <input type="text" id="p1" maxlength="20">
+      <label for="p2" id="lp2"></label>
+      <input type="text" id="p2" maxlength="20">
+      <label for="p3" id="lp3"></label>
+      <input type="text" id="p3" maxlength="20">
+      <label for="target" id="ltarget"></label>
+      <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric">
       <div class="error-msg" id="setup-error"></div>
-      <button onclick="startTournament()">Start tournament</button>
+      <button onclick="startTournament()" id="start-btn"></button>
     </div>
   </div>
 
   <!-- GAME SCREEN -->
   <div id="game-screen" class="hidden">
     <div class="card">
-      <div class="round-label" id="round-label">Game 1</div>
+      <div class="round-label" id="round-label"></div>
       <div class="teams">
         <div class="team"><div class="players" id="teamA-names"></div></div>
-        <div class="vs">VS</div>
+        <div class="vs" id="vs-label"></div>
         <div class="team"><div class="players" id="teamB-names"></div></div>
       </div>
       <div class="score-row">
-        <input type="number" id="scoreA" min="0" max="32" inputmode="numeric" placeholder="0" oninput="autoFill('A')">
+        <input type="number" id="scoreA" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('A')">
         <div class="dash">—</div>
-        <input type="number" id="scoreB" min="0" max="32" inputmode="numeric" placeholder="0" oninput="autoFill('B')">
+        <input type="number" id="scoreB" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('B')">
       </div>
-      <div class="hint">Scores of both teams must add up to 32</div>
+      <div class="hint" id="sum-hint"></div>
       <div class="error-msg" id="score-error"></div>
-      <button onclick="saveGame()">Save game &amp; shuffle players</button>
+      <button onclick="saveGame()" id="save-btn"></button>
     </div>
 
     <div class="card">
-      <h2>🏆 Ranking</h2>
+      <h2 id="ranking-title"></h2>
       <table>
         <thead>
-          <tr><th>#</th><th>Player</th><th class="num">Points</th><th class="num">Games</th><th class="num">Won</th></tr>
+          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-games"></th><th class="num" id="th-won"></th></tr>
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
     </div>
 
     <div class="card">
-      <h2>📋 Game history</h2>
-      <div id="history-list"><div class="empty-note">No games played yet</div></div>
+      <h2 id="history-title"></h2>
+      <div id="history-list"></div>
     </div>
 
-    <button class="secondary danger" onclick="resetTournament()">Reset tournament</button>
+    <button class="secondary danger" onclick="resetTournament()" id="reset-btn"></button>
   </div>
 </div>
 
 <script>
-const GAME_TARGET = 32;
 const STORAGE_KEY = 'puddle-game-state-v1';
+const LANG_KEY = 'puddle-game-lang';
+
+const STR = {
+  he: {
+    appTitle: '🎾 פאדלז׳יט',
+    subtitle: 'אמריקנו · 4 שחקנים · הזוגות מתערבבים אחרי כל משחק',
+    setupTitle: 'שמות השחקנים',
+    player: 'שחקן',
+    namePh: 'שם',
+    targetLabel: 'ניקוד לכל משחק (סך הנקודות של שתי הקבוצות)',
+    start: 'התחלת טורניר',
+    errNames: 'נא להזין את כל ארבעת השמות.',
+    errUnique: 'השמות חייבים להיות שונים זה מזה.',
+    errTarget: 'ניקוד המשחק חייב להיות מספר בין 2 ל־500.',
+    game: 'משחק',
+    vs: 'נגד',
+    sumHint: 'סכום הנקודות של שתי הקבוצות חייב להיות {n}',
+    errEnter: 'נא להזין את תוצאת המשחק.',
+    errRange: 'הניקוד חייב להיות בין 0 ל־{n}.',
+    errSum: 'שתי התוצאות חייבות להסתכם בדיוק ל־{n}.',
+    saveGame: 'שמירת משחק וערבוב שחקנים',
+    ranking: '🏆 דירוג',
+    thPlayer: 'שחקן', thPoints: 'נקודות', thGames: 'משחקים', thWon: 'ניצחונות',
+    history: '📋 היסטוריית משחקים',
+    empty: 'עוד לא שוחקו משחקים',
+    reset: 'איפוס טורניר',
+    confirmReset: 'לאפס את הטורניר? כל הנקודות וההיסטוריה יימחקו.',
+    editTitle: 'עריכת התוצאה',
+    langBtn: 'English',
+    dir: 'rtl', lang: 'he',
+  },
+  en: {
+    appTitle: '🎾 PadelJit',
+    subtitle: 'Americano · 4 players · partners shuffle after every game',
+    setupTitle: 'Player names',
+    player: 'Player',
+    namePh: 'Name',
+    targetLabel: 'Points per game (both teams combined)',
+    start: 'Start tournament',
+    errNames: 'Please enter all four player names.',
+    errUnique: 'Player names must be different from each other.',
+    errTarget: 'Points per game must be a number between 2 and 500.',
+    game: 'Game',
+    vs: 'VS',
+    sumHint: 'Scores of both teams must add up to {n}',
+    errEnter: 'Enter the score for the game.',
+    errRange: 'Scores must be between 0 and {n}.',
+    errSum: 'The two scores must add up to exactly {n}.',
+    saveGame: 'Save game & shuffle players',
+    ranking: '🏆 Ranking',
+    thPlayer: 'Player', thPoints: 'Points', thGames: 'Games', thWon: 'Won',
+    history: '📋 Game history',
+    empty: 'No games played yet',
+    reset: 'Reset tournament',
+    confirmReset: 'Reset the tournament? All scores and history will be lost.',
+    editTitle: 'Edit score',
+    langBtn: 'עברית',
+    dir: 'ltr', lang: 'en',
+  },
+};
 
 // The 3 unique team pairings possible with 4 players (indices into players array).
 const PAIRINGS = [
@@ -251,10 +350,51 @@ const PAIRINGS = [
 ];
 
 let state = null;
+let lang = localStorage.getItem(LANG_KEY) || 'he';
+let editingIndex = -1;
 
-function defaultState(players) {
+function t(key, n) {
+  const s = STR[lang][key];
+  return n === undefined ? s : s.replace('{n}', n);
+}
+
+function target() { return (state && state.target) || 32; }
+
+function toggleLang() {
+  lang = lang === 'he' ? 'en' : 'he';
+  localStorage.setItem(LANG_KEY, lang);
+  applyLang();
+  render();
+}
+
+function applyLang() {
+  document.documentElement.lang = STR[lang].lang;
+  document.documentElement.dir = STR[lang].dir;
+  document.getElementById('lang-btn').textContent = t('langBtn');
+  document.getElementById('app-title').textContent = t('appTitle');
+  document.getElementById('subtitle').textContent = t('subtitle');
+  document.getElementById('setup-title').textContent = t('setupTitle');
+  for (let i = 0; i < 4; i++) {
+    document.getElementById('lp' + i).textContent = t('player') + ' ' + (i + 1);
+    document.getElementById('p' + i).placeholder = t('namePh');
+  }
+  document.getElementById('ltarget').textContent = t('targetLabel');
+  document.getElementById('start-btn').textContent = t('start');
+  document.getElementById('vs-label').textContent = t('vs');
+  document.getElementById('save-btn').textContent = t('saveGame');
+  document.getElementById('ranking-title').textContent = t('ranking');
+  document.getElementById('th-player').textContent = t('thPlayer');
+  document.getElementById('th-points').textContent = t('thPoints');
+  document.getElementById('th-games').textContent = t('thGames');
+  document.getElementById('th-won').textContent = t('thWon');
+  document.getElementById('history-title').textContent = t('history');
+  document.getElementById('reset-btn').textContent = t('reset');
+}
+
+function defaultState(players, targetPoints) {
   return {
     players: players,                 // [name, name, name, name]
+    target: targetPoints,             // total points per game (default 32)
     points: [0, 0, 0, 0],             // cumulative points per player
     gamesPlayed: [0, 0, 0, 0],
     gamesWon: [0, 0, 0, 0],
@@ -294,6 +434,7 @@ function load() {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (raw) state = JSON.parse(raw);
+    if (state && !state.target) state.target = 32;
   } catch (e) { state = null; }
 }
 
@@ -301,31 +442,60 @@ function startTournament() {
   const names = [0, 1, 2, 3].map(i => document.getElementById('p' + i).value.trim());
   const err = document.getElementById('setup-error');
   if (names.some(n => !n)) {
-    err.textContent = 'Please enter all four player names.';
+    err.textContent = t('errNames');
     return;
   }
   const unique = new Set(names.map(n => n.toLowerCase()));
   if (unique.size < 4) {
-    err.textContent = 'Player names must be different from each other.';
+    err.textContent = t('errUnique');
+    return;
+  }
+  const targetPoints = parseInt(document.getElementById('target').value, 10);
+  if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) {
+    err.textContent = t('errTarget');
     return;
   }
   err.textContent = '';
-  state = defaultState(names);
+  state = defaultState(names, targetPoints);
   save();
   render();
 }
 
+function autoFillPair(srcInput, dstInput) {
+  // When one team's score is typed, fill the other side with (target - score).
+  const v = parseInt(srcInput.value, 10);
+  if (!isNaN(v) && v >= 0 && v <= target()) {
+    dstInput.value = target() - v;
+  }
+}
+
 function autoFill(side) {
-  // When one team's score is typed, fill the other side with (32 - score).
   const a = document.getElementById('scoreA');
   const b = document.getElementById('scoreB');
-  const src = side === 'A' ? a : b;
-  const dst = side === 'A' ? b : a;
-  const v = parseInt(src.value, 10);
-  if (!isNaN(v) && v >= 0 && v <= GAME_TARGET) {
-    dst.value = GAME_TARGET - v;
-  }
+  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a);
   document.getElementById('score-error').textContent = '';
+}
+
+function validScores(scoreA, scoreB) {
+  if (isNaN(scoreA) || isNaN(scoreB)) return 'errEnter';
+  if (scoreA < 0 || scoreB < 0 || scoreA > target() || scoreB > target()) return 'errRange';
+  if (scoreA + scoreB !== target()) return 'errSum';
+  return null;
+}
+
+function applyGame(g) {
+  g.teamA.forEach(i => { state.points[i] += g.scoreA; state.gamesPlayed[i]++; });
+  g.teamB.forEach(i => { state.points[i] += g.scoreB; state.gamesPlayed[i]++; });
+  if (g.scoreA > g.scoreB) g.teamA.forEach(i => state.gamesWon[i]++);
+  else if (g.scoreB > g.scoreA) g.teamB.forEach(i => state.gamesWon[i]++);
+}
+
+// Rebuild all totals from the game history (used after editing a past game).
+function recompute() {
+  state.points = [0, 0, 0, 0];
+  state.gamesPlayed = [0, 0, 0, 0];
+  state.gamesWon = [0, 0, 0, 0];
+  state.history.forEach(applyGame);
 }
 
 function saveGame() {
@@ -333,27 +503,17 @@ function saveGame() {
   const scoreB = parseInt(document.getElementById('scoreB').value, 10);
   const err = document.getElementById('score-error');
 
-  if (isNaN(scoreA) || isNaN(scoreB)) {
-    err.textContent = 'Enter the score for the game.';
-    return;
-  }
-  if (scoreA < 0 || scoreB < 0 || scoreA > GAME_TARGET || scoreB > GAME_TARGET) {
-    err.textContent = 'Scores must be between 0 and ' + GAME_TARGET + '.';
-    return;
-  }
-  if (scoreA + scoreB !== GAME_TARGET) {
-    err.textContent = 'The two scores must add up to exactly ' + GAME_TARGET + '.';
+  const errKey = validScores(scoreA, scoreB);
+  if (errKey) {
+    err.textContent = t(errKey, target());
     return;
   }
   err.textContent = '';
 
   const [teamA, teamB] = currentPairing();
-  teamA.forEach(i => { state.points[i] += scoreA; state.gamesPlayed[i]++; });
-  teamB.forEach(i => { state.points[i] += scoreB; state.gamesPlayed[i]++; });
-  if (scoreA > scoreB) teamA.forEach(i => state.gamesWon[i]++);
-  else if (scoreB > scoreA) teamB.forEach(i => state.gamesWon[i]++);
-
-  state.history.push({ teamA: [...teamA], teamB: [...teamB], scoreA, scoreB });
+  const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB };
+  applyGame(game);
+  state.history.push(game);
   advancePairing();
   save();
 
@@ -362,15 +522,49 @@ function saveGame() {
   render();
 }
 
+function startEdit(index) {
+  editingIndex = index;
+  render();
+}
+
+function cancelEdit() {
+  editingIndex = -1;
+  render();
+}
+
+function editAutoFill(side) {
+  const a = document.getElementById('edit-a');
+  const b = document.getElementById('edit-b');
+  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a);
+  document.getElementById('edit-error').textContent = '';
+}
+
+function saveEdit(index) {
+  const scoreA = parseInt(document.getElementById('edit-a').value, 10);
+  const scoreB = parseInt(document.getElementById('edit-b').value, 10);
+  const errKey = validScores(scoreA, scoreB);
+  if (errKey) {
+    document.getElementById('edit-error').textContent = t(errKey, target());
+    return;
+  }
+  state.history[index].scoreA = scoreA;
+  state.history[index].scoreB = scoreB;
+  recompute();
+  editingIndex = -1;
+  save();
+  render();
+}
+
 function resetTournament() {
-  if (!confirm('Reset the tournament? All scores and history will be lost.')) return;
+  if (!confirm(t('confirmReset'))) return;
   state = null;
+  editingIndex = -1;
   localStorage.removeItem(STORAGE_KEY);
   render();
 }
 
 function teamLabel(team) {
-  return team.map(i => state.players[i]).join('<br>');
+  return team.map(i => escapeHtml(state.players[i])).join('<br>');
 }
 
 function teamLabelInline(team) {
@@ -405,24 +599,40 @@ function renderLeaderboard() {
 function renderHistory() {
   const list = document.getElementById('history-list');
   if (state.history.length === 0) {
-    list.innerHTML = '<div class="empty-note">No games played yet</div>';
+    list.innerHTML = '<div class="empty-note">' + t('empty') + '</div>';
     return;
   }
   list.innerHTML = '';
   [...state.history].reverse().forEach((g, revIdx) => {
-    const gameNo = state.history.length - revIdx;
+    const index = state.history.length - 1 - revIdx;
+    const gameNo = index + 1;
     const aWins = g.scoreA > g.scoreB;
     const bWins = g.scoreB > g.scoreA;
     const div = document.createElement('div');
     div.className = 'history-item';
-    div.innerHTML =
+    let html =
       '<span class="game-no">#' + gameNo + '</span>' +
       '<span class="result">' +
         '<span class="' + (aWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(g.teamA)) + '</span>' +
-        ' vs ' +
+        ' ' + (lang === 'he' ? 'נגד' : 'vs') + ' ' +
         '<span class="' + (bWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(g.teamB)) + '</span>' +
-      '</span>' +
-      '<span class="history-score">' + g.scoreA + '–' + g.scoreB + '</span>';
+      '</span>';
+    if (editingIndex === index) {
+      html +=
+        '<div class="edit-row">' +
+          '<input type="number" id="edit-a" min="0" inputmode="numeric" value="' + g.scoreA + '" oninput="editAutoFill(\'A\')">' +
+          '<span class="dash">—</span>' +
+          '<input type="number" id="edit-b" min="0" inputmode="numeric" value="' + g.scoreB + '" oninput="editAutoFill(\'B\')">' +
+          '<button type="button" class="icon-btn ok" onclick="saveEdit(' + index + ')" aria-label="save">✔</button>' +
+          '<button type="button" class="icon-btn cancel" onclick="cancelEdit()" aria-label="cancel">✕</button>' +
+        '</div>' +
+        '<div class="edit-error" id="edit-error"></div>';
+    } else {
+      html +=
+        '<span class="history-score">' + g.scoreA + '–' + g.scoreB + '</span>' +
+        '<button type="button" class="icon-btn" onclick="startEdit(' + index + ')" title="' + t('editTitle') + '" aria-label="' + t('editTitle') + '">✎</button>';
+    }
+    div.innerHTML = html;
     list.appendChild(div);
   });
 }
@@ -444,7 +654,8 @@ function render() {
   setup.classList.add('hidden');
   game.classList.remove('hidden');
 
-  document.getElementById('round-label').textContent = 'Game ' + (state.history.length + 1);
+  document.getElementById('round-label').textContent = t('game') + ' ' + (state.history.length + 1);
+  document.getElementById('sum-hint').textContent = t('sumHint', target());
   const [teamA, teamB] = currentPairing();
   document.getElementById('teamA-names').innerHTML = teamLabel(teamA);
   document.getElementById('teamB-names').innerHTML = teamLabel(teamB);
@@ -454,6 +665,7 @@ function render() {
 }
 
 load();
+applyLang();
 render();
 </script>
 </body>
