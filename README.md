@@ -1,4 +1,4 @@
-# 🎾 פאדלז׳יט — puddlezit
+# 🎾 פאדלז׳יט — PadelZit
 
 A score-keeping app for padel Americano tournaments with 4–8 players. Hebrew (RTL) by default, with a one-tap English toggle. No signup needed — open and play.
 

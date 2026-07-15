@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>פאדלז׳יט — puddlezit</title>
+<title>פאדלז׳יט — PadelZit</title>
 <style>
   :root {
     --bg: #0f172a;
@@ -67,7 +67,7 @@
     color: var(--accent);
   }
   label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
-  input[type="text"], input[type="number"] {
+  input[type="text"], input[type="number"], input[type="email"], input[type="password"] {
     width: 100%;
     padding: 10px 12px;
     border-radius: 10px;
@@ -379,6 +379,24 @@
       <h2 id="tours-title"></h2>
       <div id="tournament-list"></div>
     </div>
+    <div class="card" id="cloud-card">
+      <h2 id="cloud-title"></h2>
+      <div id="cloud-logged-out">
+        <div class="hint" id="cloud-hint" style="text-align:start"></div>
+        <label for="cloud-email" id="lcloud-email"></label>
+        <input type="email" id="cloud-email" autocomplete="email" inputmode="email">
+        <label for="cloud-pass" id="lcloud-pass"></label>
+        <input type="password" id="cloud-pass" autocomplete="current-password">
+        <div class="error-msg" id="cloud-error" role="alert"></div>
+        <button type="button" onclick="cloudLogin()" id="cloud-login-btn"></button>
+        <button type="button" class="secondary" onclick="cloudSignup()" id="cloud-signup-btn"></button>
+      </div>
+      <div id="cloud-logged-in" class="hidden">
+        <div class="hint" id="cloud-status" style="text-align:start" aria-live="polite"></div>
+        <button type="button" class="secondary" onclick="syncNow(true)" id="cloud-sync-btn" style="margin-top:0"></button>
+        <button type="button" class="secondary" onclick="cloudLogout()" id="cloud-logout-btn"></button>
+      </div>
+    </div>
     <div class="card">
       <h2 id="backup-title"></h2>
       <button type="button" class="secondary" onclick="exportBackup()" id="export-btn" style="margin-top:0"></button>
@@ -566,6 +584,25 @@ const STR = {
     savedToast: 'משחק {n} נשמר ✓',
     ranking: '🏆 דירוג',
     thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'נצ׳', thGames: 'מש׳',
+    cloudTitle: '☁️ חשבון ענן',
+    cloudHint: 'התחברות שומרת את כל הטורנירים בענן ומסנכרנת אוטומטית בין המכשירים שלך. אפשר להמשיך גם בלי חשבון — הכול יישמר במכשיר.',
+    cloudEmail: 'אימייל',
+    cloudPass: 'סיסמה (לפחות 6 תווים)',
+    cloudLogin: 'התחברות',
+    cloudSignup: 'הרשמה (פעם ראשונה)',
+    cloudLogout: 'התנתקות',
+    cloudSyncBtn: '🔄 סנכרון עכשיו',
+    cloudSynced: 'מחובר: {n} · מסונכרן ✓',
+    cloudSyncing: 'מחובר: {n} · מסנכרן…',
+    cloudSyncErr: 'מחובר: {n} · שגיאת סנכרון — נסו "סנכרון עכשיו"',
+    cloudErrCreds: 'אימייל או סיסמה שגויים.',
+    cloudErrWeak: 'הסיסמה קצרה מדי — לפחות 6 תווים.',
+    cloudErrEmail: 'כתובת האימייל לא תקינה.',
+    cloudErrConfirm: 'נשלח מייל אישור לכתובת שלך — אשרו אותו ואז התחברו.',
+    cloudErrExists: 'החשבון כבר קיים — נסו להתחבר.',
+    cloudErrNet: 'אין חיבור לשרת הענן. (בגרסה שבתוך claude.ai הענן חסום — השתמשו בקישור הציבורי או באפליקציה)',
+    cloudErrTable: 'שרת הענן עדיין לא הוגדר — צריך להריץ את סקריפט ההקמה (ראו הוראות).',
+    cloudSignupOk: 'החשבון נוצר ✓',
     backupTitle: '💾 גיבוי והעברה בין מכשירים',
     exportBtn: 'העתקת קוד גיבוי',
     importBtn: 'שחזור מקוד גיבוי',
@@ -603,7 +640,7 @@ const STR = {
     dir: 'rtl', lang: 'he', locale: 'he-IL',
   },
   en: {
-    appTitle: '🎾 puddlezit',
+    appTitle: '🎾 PadelZit',
     subtitle: 'Americano · 4 players · partners shuffle after every game',
     newTour: '➕ New tournament',
     tours: '📁 My tournaments',
@@ -642,6 +679,25 @@ const STR = {
     savedToast: 'Game {n} saved ✓',
     ranking: '🏆 Ranking',
     thPlayer: 'Player', thPoints: 'Points', thWon: 'W', thGames: 'GP',
+    cloudTitle: '☁️ Cloud account',
+    cloudHint: 'Signing in saves all tournaments to the cloud and syncs them across your devices. You can keep playing without an account — everything stays on this device.',
+    cloudEmail: 'Email',
+    cloudPass: 'Password (6+ characters)',
+    cloudLogin: 'Sign in',
+    cloudSignup: 'Sign up (first time)',
+    cloudLogout: 'Sign out',
+    cloudSyncBtn: '🔄 Sync now',
+    cloudSynced: 'Signed in: {n} · synced ✓',
+    cloudSyncing: 'Signed in: {n} · syncing…',
+    cloudSyncErr: 'Signed in: {n} · sync error — try "Sync now"',
+    cloudErrCreds: 'Wrong email or password.',
+    cloudErrWeak: 'Password too short — at least 6 characters.',
+    cloudErrEmail: 'Invalid email address.',
+    cloudErrConfirm: 'A confirmation email was sent — confirm it, then sign in.',
+    cloudErrExists: 'Account already exists — try signing in.',
+    cloudErrNet: 'Cannot reach the cloud server. (Inside claude.ai the cloud is blocked — use the public link or the app)',
+    cloudErrTable: 'The cloud server is not set up yet — run the setup script (see instructions).',
+    cloudSignupOk: 'Account created ✓',
     backupTitle: '💾 Backup & transfer between devices',
     exportBtn: 'Copy backup code',
     importBtn: 'Restore from backup code',
@@ -687,7 +743,7 @@ const PAIRINGS = [
   [[0, 3], [1, 2]],
 ];
 
-let db = { tournaments: [], lastPlayers: null, lastTarget: 32 };
+let db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [] };
 let lang = store.getItem(LANG_KEY) || 'he';
 let view = 'home';          // 'home' | 'setup' | 'game' | 'podium'
 let activeId = null;        // tournament shown in game/podium view
@@ -707,6 +763,7 @@ function current() {
 
 function saveDb() {
   store.setItem(DB_KEY, JSON.stringify(db));
+  scheduleCloudPush();
 }
 
 // Rebuild a tournament from untrusted stored data; returns null if unusable.
@@ -722,6 +779,7 @@ function sanitizeTournament(x) {
   if (Number.isInteger(x.createdAt)) tour.createdAt = x.createdAt;
   tour.finished = !!x.finished;
   tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
+  tour.updatedAt = Number.isInteger(x.updatedAt) ? x.updatedAt : null;
   const validTeams = g => {
     const all = [...g.teamA, ...g.teamB];
     return all.every(i => Number.isInteger(i) && i >= 0 && i < n) && new Set(all).size === 4;
@@ -751,7 +809,7 @@ function sanitizeTournament(x) {
 }
 
 function loadDb() {
-  db = { tournaments: [], lastPlayers: null, lastTarget: 32 };
+  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [] };
   try {
     const raw = store.getItem(DB_KEY);
     if (raw) {
@@ -760,6 +818,7 @@ function loadDb() {
         db.tournaments = parsed.tournaments.map(sanitizeTournament).filter(Boolean);
         if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length >= 4 && parsed.lastPlayers.length <= 8) db.lastPlayers = parsed.lastPlayers;
         if (Number.isInteger(parsed.lastTarget)) db.lastTarget = parsed.lastTarget;
+        if (Array.isArray(parsed.deletedIds)) db.deletedIds = parsed.deletedIds.filter(x => typeof x === 'string');
       }
     }
   } catch (e) { /* corrupted storage — start fresh */ }
@@ -784,6 +843,7 @@ function newTournamentObj(players, targetPoints) {
   const tour = {
     id: 'T' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
     createdAt: Date.now(),
+    updatedAt: Date.now(),
     finished: false,
     finishedAt: null,
     players: players,
@@ -906,6 +966,14 @@ function applyLang() {
   set('rematch-btn', 'rematch');
   set('resume-btn', 'resume');
   set('podium-home-btn', 'home');
+  set('cloud-title', 'cloudTitle');
+  set('cloud-hint', 'cloudHint');
+  set('lcloud-email', 'cloudEmail');
+  set('lcloud-pass', 'cloudPass');
+  set('cloud-login-btn', 'cloudLogin');
+  set('cloud-signup-btn', 'cloudSignup');
+  set('cloud-sync-btn', 'cloudSyncBtn');
+  set('cloud-logout-btn', 'cloudLogout');
   set('backup-title', 'backupTitle');
   set('export-btn', 'exportBtn');
   set('import-btn', 'importBtn');
@@ -1025,6 +1093,7 @@ function changeTarget() {
   }
   err.textContent = '';
   tour.target = v;
+  touch(tour);
   saveDb();
   const a = document.getElementById('scoreA');
   const b = document.getElementById('scoreB');
@@ -1107,6 +1176,7 @@ function saveGame() {
   tour.history.push(game);
   advanceAfterSave(tour);
   lastSaveAt = Date.now();
+  touch(tour);
   saveDb();
 
   document.getElementById('scoreA').value = '';
@@ -1149,6 +1219,7 @@ function saveEdit(index) {
   tour.history[index].scoreB = scoreB;
   recompute(tour);
   editingIndex = -1;
+  touch(tour);
   saveDb();
   render();
 }
@@ -1172,6 +1243,7 @@ function finishTournament() {
   const tour = current(); if (!tour) return;
   tour.finished = true;
   tour.finishedAt = Date.now();
+  touch(tour);
   saveDb();
   finishCancel();
   view = 'podium';
@@ -1182,6 +1254,7 @@ function resumeTournament() {
   const tour = current(); if (!tour) return;
   tour.finished = false;
   tour.finishedAt = null;
+  touch(tour);
   saveDb();
   view = 'game';
   render();
@@ -1216,6 +1289,7 @@ function deleteTournament(id) {
   pendingDeleteId = null;
   db.tournaments = db.tournaments.filter(x => x.id !== id);
   if (activeId === id) activeId = null;
+  if (!db.deletedIds.includes(id)) db.deletedIds.push(id);
   saveDb();
   render();
 }
@@ -1229,7 +1303,7 @@ function shareText(tour) {
   const dirMark = lang === 'he' ? '\u200F' : '\u200E';
   const order = rankOrder(tour);
   const head = tour.finished ? t('shareHeadDone') : t('shareHeadLive');
-  const brand = lang === 'he' ? 'פאדלז׳יט' : 'puddlezit';
+  const brand = lang === 'he' ? 'פאדלז׳יט' : 'PadelZit';
   const lines = [
     dirMark + '*' + brand + '* — ' + head,
     dirMark + new Date(tour.createdAt).toLocaleDateString(STR[lang].locale),
@@ -1260,6 +1334,194 @@ function copyResults() {
   } else {
     fallback();
   }
+}
+
+/* ---------- cloud account & sync (Supabase) ---------- */
+
+const CLOUD = {
+  url: store.getItem('padelzit-cloud-url') || 'https://axrugdszycwmadbdwolx.supabase.co',
+  key: store.getItem('padelzit-cloud-key') || 'sb_publishable_DJKbYBC-m4TcUbM2D1gSlQ_WQfJW-1m',
+};
+const SESSION_KEY = 'padelzit-session';
+let session = null;          // {access_token, refresh_token, expires_at, user:{id,email}}
+let syncStatus = 'idle';     // idle | syncing | error
+let pushTimer = null;
+let pulling = false;
+
+function loadSession() {
+  try {
+    const raw = store.getItem(SESSION_KEY);
+    if (raw) {
+      const s = JSON.parse(raw);
+      if (s && s.access_token && s.refresh_token && s.user) session = s;
+    }
+  } catch (e) { session = null; }
+}
+
+function setSession(s) {
+  session = {
+    access_token: s.access_token,
+    refresh_token: s.refresh_token,
+    expires_at: s.expires_at || Math.floor(Date.now() / 1000) + (s.expires_in || 3600),
+    user: { id: s.user.id, email: s.user.email },
+  };
+  store.setItem(SESSION_KEY, JSON.stringify(session));
+}
+
+function clearSession() {
+  session = null;
+  store.removeItem(SESSION_KEY);
+}
+
+async function ensureFreshSession() {
+  if (!session) return;
+  if (session.expires_at * 1000 - Date.now() > 60000) return;
+  const res = await fetch(CLOUD.url + '/auth/v1/token?grant_type=refresh_token', {
+    method: 'POST',
+    headers: { apikey: CLOUD.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ refresh_token: session.refresh_token }),
+  });
+  if (res.ok) setSession(await res.json());
+  else if (res.status === 400 || res.status === 401) { clearSession(); renderCloud(); }
+}
+
+async function sbFetch(path, opts) {
+  opts = opts || {};
+  const headers = Object.assign({ apikey: CLOUD.key, 'Content-Type': 'application/json' }, opts.headers || {});
+  if (session) {
+    await ensureFreshSession();
+    if (!session) throw new Error('signed-out');
+    headers['Authorization'] = 'Bearer ' + session.access_token;
+  }
+  return fetch(CLOUD.url + path, Object.assign({}, opts, { headers }));
+}
+
+function authErrorKey(status, body) {
+  const code = (body && (body.error_code || body.code || body.msg || body.message || body.error_description || '')) + '';
+  if (/already.*(registered|exists)|user_already_exists/i.test(code)) return 'cloudErrExists';
+  if (/weak.*password|at least/i.test(code)) return 'cloudErrWeak';
+  if (/valid.*email|invalid.*email|validation_failed/i.test(code)) return 'cloudErrEmail';
+  if (/invalid.*(credentials|login)|invalid_grant/i.test(code)) return 'cloudErrCreds';
+  return status === 0 ? 'cloudErrNet' : 'cloudErrCreds';
+}
+
+async function cloudSignup() { await cloudAuth('/auth/v1/signup', true); }
+async function cloudLogin() { await cloudAuth('/auth/v1/token?grant_type=password', false); }
+
+async function cloudAuth(path, isSignup) {
+  const email = document.getElementById('cloud-email').value.trim();
+  const pass = document.getElementById('cloud-pass').value;
+  const err = document.getElementById('cloud-error');
+  err.textContent = '';
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { err.textContent = t('cloudErrEmail'); return; }
+  if (pass.length < 6) { err.textContent = t('cloudErrWeak'); return; }
+  let res;
+  try {
+    res = await fetch(CLOUD.url + path, {
+      method: 'POST',
+      headers: { apikey: CLOUD.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: email, password: pass }),
+    });
+  } catch (e) { err.textContent = t('cloudErrNet'); return; }
+  let body = null;
+  try { body = await res.json(); } catch (e) { body = null; }
+  if (!res.ok) { err.textContent = t(authErrorKey(res.status, body)); return; }
+  if (body && body.access_token) {
+    setSession(body);
+    document.getElementById('cloud-pass').value = '';
+    renderCloud();
+    if (isSignup) showToast(t('cloudSignupOk'));
+    syncNow(true);
+  } else {
+    // Signup succeeded but email confirmation is enabled — no session yet.
+    err.textContent = t('cloudErrConfirm');
+  }
+}
+
+function cloudLogout() {
+  clearSession();
+  renderCloud();
+}
+
+function touch(tour) { tour.updatedAt = Date.now(); }
+function stampOf(tour) { return tour.updatedAt || tour.createdAt || 0; }
+
+async function cloudPull() {
+  const res = await sbFetch('/rest/v1/tournaments?select=id,data');
+  if (!res.ok) throw Object.assign(new Error('pull'), { status: res.status });
+  const rows = await res.json();
+  let changed = false;
+  pulling = true;
+  try {
+    rows.forEach(r => {
+      if ((db.deletedIds || []).includes(r.id)) return;
+      const remote = sanitizeTournament(r.data);
+      if (!remote) return;
+      remote.id = r.id;
+      const at = db.tournaments.findIndex(x => x.id === r.id);
+      if (at < 0) { db.tournaments.push(remote); changed = true; }
+      else if (stampOf(remote) > stampOf(db.tournaments[at])) { db.tournaments[at] = remote; changed = true; }
+    });
+    if (changed) {
+      db.tournaments.sort((a, b) => b.createdAt - a.createdAt);
+      saveDb();
+      render();
+    }
+  } finally { pulling = false; }
+}
+
+async function cloudPush() {
+  for (const id of (db.deletedIds || []).slice()) {
+    const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(id), { method: 'DELETE' });
+    if (res.ok || res.status === 404) db.deletedIds = db.deletedIds.filter(x => x !== id);
+    else throw Object.assign(new Error('delete'), { status: res.status });
+  }
+  if (db.tournaments.length > 0) {
+    const rows = db.tournaments.map(tr => ({ id: tr.id, data: tr }));
+    const res = await sbFetch('/rest/v1/tournaments?on_conflict=id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify(rows),
+    });
+    if (!res.ok) throw Object.assign(new Error('push'), { status: res.status });
+  }
+  pulling = true;
+  try { saveDb(); } finally { pulling = false; }
+}
+
+async function syncNow(alsoPull) {
+  if (!session) return;
+  syncStatus = 'syncing';
+  renderCloud();
+  try {
+    if (alsoPull !== false) await cloudPull();
+    await cloudPush();
+    syncStatus = 'idle';
+  } catch (e) {
+    syncStatus = 'error';
+    if (e && (e.status === 404 || e.status === 406)) showToast(t('cloudErrTable'));
+  }
+  renderCloud();
+}
+
+function scheduleCloudPush() {
+  if (!session || pulling) return;
+  clearTimeout(pushTimer);
+  pushTimer = setTimeout(() => { syncNow(false); }, 1500);
+}
+
+function renderCloud() {
+  const out = document.getElementById('cloud-logged-out');
+  const inn = document.getElementById('cloud-logged-in');
+  if (!session) {
+    out.classList.remove('hidden');
+    inn.classList.add('hidden');
+    return;
+  }
+  out.classList.add('hidden');
+  inn.classList.remove('hidden');
+  const key = syncStatus === 'syncing' ? 'cloudSyncing' : syncStatus === 'error' ? 'cloudSyncErr' : 'cloudSynced';
+  document.getElementById('cloud-status').textContent = t(key, session.user.email);
 }
 
 /* ---------- backup / restore ---------- */
@@ -1457,6 +1719,7 @@ function renderPodium(tour) {
 }
 
 function renderHome() {
+  renderCloud();
   const list = document.getElementById('tournament-list');
   if (db.tournaments.length === 0) {
     list.innerHTML = '<div class="empty-note">' + t('noTours') + '</div>';
@@ -1556,6 +1819,7 @@ window.addEventListener('storage', e => {
 });
 
 loadDb();
+loadSession();
 // Reopen the most recent tournament automatically if it's still live.
 if (db.tournaments.length > 0 && !db.tournaments[0].finished) {
   activeId = db.tournaments[0].id;
@@ -1565,6 +1829,7 @@ if (db.tournaments.length > 0 && !db.tournaments[0].finished) {
 }
 applyLang();
 render();
+if (session) syncNow(true);
 </script>
 </body>
 </html>
