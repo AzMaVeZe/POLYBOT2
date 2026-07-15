@@ -1,21 +1,22 @@
 # 🎾 פאדלז׳יט — puddlezit
 
-A score-keeping app for a 4-player padel Americano tournament. Hebrew (RTL) by default, with a one-tap English toggle.
+A score-keeping app for 4-player padel Americano tournaments. Hebrew (RTL) by default, with a one-tap English toggle. No signup needed — open and play.
 
-## How it works
+## Features
 
-- **4 players** enter their names once, at the start of the tournament.
-- Every game is played to a configurable total (default **32 points**) — the two teams' scores always add up to the target (e.g. 20–12), and typing one side fills in the other automatically.
-- The points-per-game target can be **changed at any time from the game screen** (🎯); all games from that moment on use the new total, while already-played games keep the target they were played to.
-- After every game the **players are shuffled** into new pairs. With 4 players there are 3 possible team combinations, and the app cycles through all of them in random order before reshuffling, so everyone partners with everyone.
-- Each player collects the points their team scored in every game.
-- The **ranking table** shows live standings: 1st, 2nd, 3rd and 4th place with each player's exact total points, games played and games won. Ties on points are broken by games won.
-- A **game history** lists every game with the teams, winner and score — and every past game's score can be **edited** (✎) at any time; the standings recompute automatically.
-- The state is saved in the browser (localStorage), so you can close the page and continue later on the same device.
+- **Multi-tournament home screen** — start a new tournament, continue a live one, or revisit finished ones. Player names are remembered between tournaments.
+- **4 players, shuffled pairs** — with 4 players there are 3 possible team combinations; the app cycles through all of them in random order before reshuffling (never repeating the same pairing twice in a row), so everyone partners with everyone. The round/cycle position is shown ("Game 4 · Round 2 (1/3)").
+- **Games to a configurable total** (default 32 points) — type one team's score and the other fills in automatically. The 🎯 target can be changed mid-tournament; each game remembers the target it was played to.
+- **Live ranking** — points, point differential (+/−) and wins per player; ties broken by wins, then differential.
+- **Editable history** — fix any past game's score (✎); standings recompute instantly.
+- **Finish & podium** — crown the winner with a 🥇🥈🥉 podium and final table.
+- **Share on WhatsApp** — send the standings to friends with one tap (or copy as text).
+- **All-time leaderboard** — aggregated points, wins and 🏆 titles across all tournaments, saved on the device.
+- Robust storage: corrupted/legacy saves are sanitized, multiple open tabs stay in sync, and the app still works where localStorage is blocked (memory fallback).
 
 ## Running it
 
-No build step, no server, no dependencies — it is a single HTML file.
+No build step, no server, no dependencies — a single HTML file.
 
 Open `index.html` in any browser, or serve it locally:
 
@@ -24,4 +25,12 @@ python3 -m http.server 8000
 # then open http://localhost:8000
 ```
 
-Works well on a phone at the court, too.
+Works well on a phone at the court.
+
+## Roadmap
+
+- More than 4 players (5–8 with resting rotation), Mexicano mode (pairs by standings)
+- Accounts (email / Google / Facebook) with cross-device sync
+- Shared online tournaments: register via a link, live leaderboard for the whole group
+
+These require a small backend (e.g. Firebase/Supabase); the current app is intentionally 100% client-side and signup-free.

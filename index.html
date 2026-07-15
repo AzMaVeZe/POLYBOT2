@@ -10,7 +10,7 @@
     --card: #1e293b;
     --card-2: #273449;
     --text: #e2e8f0;
-    --muted: #94a3b8;
+    --muted: #a5b4c8;
     --accent: #38bdf8;
     --accent-2: #0ea5e9;
     --gold: #fbbf24;
@@ -18,6 +18,7 @@
     --bronze: #d97706;
     --green: #34d399;
     --red: #f87171;
+    --whatsapp: #25d366;
     --radius: 14px;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -32,12 +33,12 @@
   .topbar { display: flex; justify-content: flex-end; }
   .lang-btn {
     width: auto;
-    padding: 6px 14px;
+    padding: 10px 16px;
     border: 1px solid #334155;
     border-radius: 999px;
     background: var(--card);
     color: var(--muted);
-    font-size: 0.8rem;
+    font-size: 0.85rem;
     font-weight: 700;
     cursor: pointer;
   }
@@ -65,7 +66,7 @@
     margin-bottom: 12px;
     color: var(--accent);
   }
-  label { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 4px; }
+  label { display: block; font-size: 0.85rem; color: var(--muted); margin-bottom: 4px; }
   input[type="text"], input[type="number"] {
     width: 100%;
     padding: 10px 12px;
@@ -75,6 +76,7 @@
     color: var(--text);
     font-size: 1rem;
     margin-bottom: 12px;
+    min-height: 44px;
   }
   input:focus { outline: 2px solid var(--accent); border-color: transparent; }
   button {
@@ -90,6 +92,7 @@
     transition: transform 0.1s, opacity 0.2s;
   }
   button:active { transform: scale(0.98); }
+  button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
   button:disabled { opacity: 0.4; cursor: not-allowed; }
   button.secondary {
     background: var(--card-2);
@@ -98,6 +101,19 @@
     margin-top: 8px;
   }
   button.danger { background: #7f1d1d; color: #fecaca; }
+  button.whatsapp, a.whatsapp {
+    display: block;
+    width: 100%;
+    padding: 13px;
+    border-radius: 10px;
+    background: var(--whatsapp);
+    color: #06301c;
+    font-size: 1rem;
+    font-weight: 800;
+    text-align: center;
+    text-decoration: none;
+    cursor: pointer;
+  }
   .hidden { display: none !important; }
 
   /* Match screen */
@@ -106,7 +122,6 @@
     color: var(--muted);
     font-size: 0.85rem;
     margin-bottom: 12px;
-    text-transform: uppercase;
     letter-spacing: 1px;
   }
   .teams {
@@ -121,8 +136,17 @@
     border-radius: 12px;
     padding: 12px 8px;
     text-align: center;
+    min-width: 0;
   }
-  .team .players { font-weight: 700; font-size: 0.95rem; line-height: 1.5; }
+  .teams.flash .team { animation: teamflash 0.6s ease; }
+  @keyframes teamflash {
+    0% { background: #1d4ed8; }
+    100% { background: var(--card-2); }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .teams.flash .team { animation: none; }
+  }
+  .team .players { font-weight: 700; font-size: 0.95rem; line-height: 1.5; overflow-wrap: anywhere; }
   .vs {
     display: flex;
     align-items: center;
@@ -139,7 +163,7 @@
   }
   .score-row input { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 0; }
   .score-row .dash { text-align: center; color: var(--muted); font-weight: 800; }
-  .hint { text-align: center; color: var(--muted); font-size: 0.75rem; margin-bottom: 12px; }
+  .hint { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
   .target-row {
     display: flex;
     align-items: center;
@@ -148,23 +172,23 @@
     margin-bottom: 14px;
   }
   .target-row label { margin-bottom: 0; font-size: 0.85rem; }
-  .target-row input { width: 84px; text-align: center; font-weight: 800; margin-bottom: 0; padding: 8px; }
-  .error-msg { text-align: center; color: var(--red); font-size: 0.8rem; margin-bottom: 10px; min-height: 1em; }
+  .target-row input { width: 90px; text-align: center; font-weight: 800; margin-bottom: 0; padding: 8px; }
+  .error-msg { text-align: center; color: var(--red); font-size: 0.85rem; margin-bottom: 10px; min-height: 1em; }
 
   /* Leaderboard */
   table { width: 100%; border-collapse: collapse; }
   th {
     text-align: start;
     color: var(--muted);
-    font-size: 0.72rem;
-    text-transform: uppercase;
+    font-size: 0.78rem;
     letter-spacing: 0.5px;
     padding: 6px 8px;
     border-bottom: 1px solid #334155;
   }
   th.num, td.num { text-align: end; }
-  td { padding: 10px 8px; border-bottom: 1px solid #2b3a52; font-size: 0.95rem; }
+  td { padding: 10px 8px; border-bottom: 1px solid #2b3a52; font-size: 0.95rem; overflow-wrap: anywhere; }
   tr:last-child td { border-bottom: none; }
+  td.num, .history-score, .diff { font-variant-numeric: tabular-nums; }
   .rank-badge {
     display: inline-flex;
     align-items: center;
@@ -180,6 +204,8 @@
   .rank-2 { background: var(--silver); color: #1e293b; }
   .rank-3 { background: var(--bronze); color: #fff7ed; }
   .pts { font-weight: 800; color: var(--accent); }
+  .diff.pos { color: var(--green); }
+  .diff.neg { color: var(--red); }
 
   /* History */
   .history-item {
@@ -195,17 +221,18 @@
     flex-wrap: wrap;
   }
   .history-item .game-no { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
-  .history-item .result { flex: 1; min-width: 140px; }
+  .history-item .result { flex: 1; min-width: 120px; overflow-wrap: anywhere; }
   .history-item .winner { color: var(--green); font-weight: 700; }
-  .history-score { font-weight: 800; white-space: nowrap; }
+  .history-score { font-weight: 800; white-space: nowrap; direction: ltr; unicode-bidi: isolate; }
+  .history-target { color: var(--muted); font-size: 0.75rem; white-space: nowrap; }
   .icon-btn {
-    width: 32px;
-    height: 32px;
+    width: 44px;
+    height: 44px;
     padding: 0;
     border-radius: 8px;
     background: #334155;
     color: var(--text);
-    font-size: 0.9rem;
+    font-size: 1rem;
     flex: 0 0 auto;
   }
   .edit-row {
@@ -215,18 +242,93 @@
     width: 100%;
     margin-top: 8px;
   }
-  .edit-row input { width: 70px; text-align: center; font-weight: 800; margin-bottom: 0; padding: 8px; }
+  .edit-row input { width: 74px; text-align: center; font-weight: 800; margin-bottom: 0; padding: 8px; }
   .edit-row .dash { color: var(--muted); font-weight: 800; }
   .edit-row .icon-btn.ok { background: #14532d; color: #bbf7d0; }
   .edit-row .icon-btn.cancel { background: #450a0a; color: #fecaca; }
-  .edit-error { width: 100%; color: var(--red); font-size: 0.75rem; }
+  .edit-error { width: 100%; color: var(--red); font-size: 0.8rem; }
   .empty-note { color: var(--muted); font-size: 0.85rem; text-align: center; padding: 8px 0; }
 
-  /* Inline reset confirmation (browser confirm() is blocked in sandboxed pages) */
-  #reset-confirm { margin-top: 10px; }
-  #reset-confirm .error-msg { margin-bottom: 8px; }
+  /* Inline confirmation (browser confirm() is blocked in sandboxed pages) */
+  #finish-confirm { margin-top: 10px; }
+  #finish-confirm .error-msg { margin-bottom: 8px; color: var(--muted); }
   .confirm-row { display: flex; gap: 8px; }
   .confirm-row button { margin-top: 0; }
+
+  /* Home: tournament list */
+  .tour-item {
+    background: var(--card-2);
+    border-radius: 10px;
+    padding: 12px;
+    margin-bottom: 10px;
+  }
+  .tour-item .tour-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 8px;
+    margin-bottom: 4px;
+  }
+  .tour-item .tour-date { font-weight: 700; }
+  .tour-status {
+    font-size: 0.72rem;
+    font-weight: 800;
+    padding: 3px 10px;
+    border-radius: 999px;
+    white-space: nowrap;
+  }
+  .tour-status.live { background: #14532d; color: #bbf7d0; }
+  .tour-status.done { background: #334155; color: var(--muted); }
+  .tour-item .tour-sub { color: var(--muted); font-size: 0.8rem; margin-bottom: 10px; }
+  .tour-actions { display: flex; gap: 8px; }
+  .tour-actions button { margin-top: 0; padding: 10px; font-size: 0.9rem; }
+  .tour-actions .del { flex: 0 0 auto; width: auto; padding: 10px 14px; background: #450a0a; color: #fecaca; }
+
+  /* Podium */
+  .podium-first {
+    text-align: center;
+    padding: 10px 0 4px;
+  }
+  .podium-first .medal { font-size: 3rem; line-height: 1; }
+  .podium-first .name { font-size: 1.6rem; font-weight: 900; margin: 6px 0 2px; overflow-wrap: anywhere; }
+  .podium-first .score { color: var(--gold); font-weight: 800; }
+  .podium-rest {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 14px 0 6px;
+    flex-wrap: wrap;
+  }
+  .podium-rest .p {
+    text-align: center;
+    min-width: 110px;
+  }
+  .podium-rest .medal { font-size: 1.8rem; }
+  .podium-rest .name { font-weight: 700; overflow-wrap: anywhere; }
+  .podium-rest .score { color: var(--muted); font-size: 0.85rem; }
+  #share-fallback { width: 100%; min-height: 120px; margin-top: 10px; border-radius: 10px; border: 1px solid #334155; background: var(--card-2); color: var(--text); padding: 10px; font-size: 0.85rem; }
+
+  /* Toast */
+  #toast {
+    position: fixed;
+    bottom: 22px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #0c4a6e;
+    color: #e0f2fe;
+    padding: 10px 20px;
+    border-radius: 999px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 4px 14px rgba(0,0,0,0.4);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s;
+    z-index: 50;
+    max-width: 90vw;
+    text-align: center;
+  }
+  #toast.show { opacity: 1; }
 </style>
 </head>
 <body>
@@ -237,22 +339,44 @@
   <h1 id="app-title">🎾 פאדלז׳יט</h1>
   <div class="subtitle" id="subtitle"></div>
 
+  <!-- HOME SCREEN -->
+  <div id="home-screen" class="hidden">
+    <button onclick="gotoSetup()" id="new-tour-btn"></button>
+    <div style="height:16px"></div>
+    <div class="card" id="tour-list-card">
+      <h2 id="tours-title"></h2>
+      <div id="tournament-list"></div>
+    </div>
+    <div class="card" id="alltime-card">
+      <h2 id="alltime-title"></h2>
+      <table>
+        <thead>
+          <tr><th id="ath-player"></th><th class="num" id="ath-titles"></th><th class="num" id="ath-points"></th><th class="num" id="ath-games"></th><th class="num" id="ath-won"></th></tr>
+        </thead>
+        <tbody id="alltime-body"></tbody>
+      </table>
+    </div>
+  </div>
+
   <!-- SETUP SCREEN -->
-  <div id="setup-screen">
+  <div id="setup-screen" class="hidden">
     <div class="card">
       <h2 id="setup-title"></h2>
-      <label for="p0" id="lp0"></label>
-      <input type="text" id="p0" maxlength="20">
-      <label for="p1" id="lp1"></label>
-      <input type="text" id="p1" maxlength="20">
-      <label for="p2" id="lp2"></label>
-      <input type="text" id="p2" maxlength="20">
-      <label for="p3" id="lp3"></label>
-      <input type="text" id="p3" maxlength="20">
-      <label for="target" id="ltarget"></label>
-      <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric">
-      <div class="error-msg" id="setup-error"></div>
-      <button onclick="startTournament()" id="start-btn"></button>
+      <form id="setup-form">
+        <label for="p0" id="lp0"></label>
+        <input type="text" id="p0" maxlength="20" autocomplete="off" enterkeyhint="next">
+        <label for="p1" id="lp1"></label>
+        <input type="text" id="p1" maxlength="20" autocomplete="off" enterkeyhint="next">
+        <label for="p2" id="lp2"></label>
+        <input type="text" id="p2" maxlength="20" autocomplete="off" enterkeyhint="next">
+        <label for="p3" id="lp3"></label>
+        <input type="text" id="p3" maxlength="20" autocomplete="off" enterkeyhint="next">
+        <label for="target" id="ltarget"></label>
+        <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric" enterkeyhint="go">
+        <div class="error-msg" id="setup-error" role="alert"></div>
+        <button type="submit" id="start-btn"></button>
+      </form>
+      <button type="button" class="secondary" onclick="gotoHome()" id="setup-back-btn"></button>
     </div>
   </div>
 
@@ -264,7 +388,7 @@
         <label for="game-target" id="lgame-target"></label>
         <input type="number" id="game-target" min="2" max="500" inputmode="numeric" onchange="changeTarget()">
       </div>
-      <div class="teams">
+      <div class="teams" id="teams-box">
         <div class="team"><div class="players" id="teamA-names"></div></div>
         <div class="vs" id="vs-label"></div>
         <div class="team"><div class="players" id="teamB-names"></div></div>
@@ -275,7 +399,7 @@
         <input type="number" id="scoreB" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('B')">
       </div>
       <div class="hint" id="sum-hint"></div>
-      <div class="error-msg" id="score-error"></div>
+      <div class="error-msg" id="score-error" role="alert"></div>
       <button onclick="saveGame()" id="save-btn"></button>
     </div>
 
@@ -283,7 +407,7 @@
       <h2 id="ranking-title"></h2>
       <table>
         <thead>
-          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-games"></th><th class="num" id="th-won"></th></tr>
+          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff">+/-</th><th class="num" id="th-won"></th></tr>
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
@@ -294,83 +418,206 @@
       <div id="history-list"></div>
     </div>
 
-    <button class="secondary danger" onclick="askReset()" id="reset-btn"></button>
-    <div id="reset-confirm" class="hidden">
-      <div class="error-msg" id="reset-question"></div>
+    <button onclick="finishAsk()" class="secondary" id="finish-btn"></button>
+    <div id="finish-confirm" class="hidden">
+      <div class="error-msg" id="finish-question"></div>
       <div class="confirm-row">
-        <button class="danger" onclick="resetTournament()" id="reset-yes"></button>
-        <button class="secondary" onclick="cancelReset()" id="reset-no"></button>
+        <button onclick="finishTournament()" id="finish-yes"></button>
+        <button class="secondary" onclick="finishCancel()" id="finish-no"></button>
       </div>
     </div>
+    <button class="secondary" onclick="gotoHome()" id="game-home-btn"></button>
+  </div>
+
+  <!-- PODIUM SCREEN -->
+  <div id="podium-screen" class="hidden">
+    <div class="card">
+      <h2 id="podium-title"></h2>
+      <div class="podium-first">
+        <div class="medal">🥇</div>
+        <div class="name" id="pod-1-name"></div>
+        <div class="score" id="pod-1-score"></div>
+      </div>
+      <div class="podium-rest">
+        <div class="p"><div class="medal">🥈</div><div class="name" id="pod-2-name"></div><div class="score" id="pod-2-score"></div></div>
+        <div class="p"><div class="medal">🥉</div><div class="name" id="pod-3-name"></div><div class="score" id="pod-3-score"></div></div>
+      </div>
+    </div>
+    <div class="card">
+      <h2 id="final-title"></h2>
+      <table>
+        <thead>
+          <tr><th>#</th><th id="fth-player"></th><th class="num" id="fth-points"></th><th class="num" id="fth-diff">+/-</th><th class="num" id="fth-won"></th></tr>
+        </thead>
+        <tbody id="final-body"></tbody>
+      </table>
+    </div>
+    <div class="card">
+      <h2 id="share-title"></h2>
+      <a class="whatsapp" id="wa-link" target="_blank" rel="noopener noreferrer"></a>
+      <button class="secondary" onclick="copyResults()" id="copy-btn"></button>
+      <textarea id="share-fallback" class="hidden" readonly></textarea>
+    </div>
+    <button onclick="rematch()" id="rematch-btn"></button>
+    <button class="secondary" onclick="resumeTournament()" id="resume-btn"></button>
+    <button class="secondary" onclick="gotoHome()" id="podium-home-btn"></button>
   </div>
 </div>
+<div id="toast" role="status" aria-live="polite"></div>
 
 <script>
-const STORAGE_KEY = 'puddle-game-state-v1';
+const DB_KEY = 'puddlezit-db-v2';
+const LEGACY_KEY = 'puddle-game-state-v1';
 const LANG_KEY = 'puddle-game-lang';
+
+// localStorage can throw in sandboxed frames — fall back to in-memory storage.
+const store = (() => {
+  try {
+    const s = window.localStorage;
+    s.getItem('__probe__');
+    return s;
+  } catch (e) {
+    const m = {};
+    return {
+      getItem: k => (k in m ? m[k] : null),
+      setItem: (k, v) => { m[k] = String(v); },
+      removeItem: k => { delete m[k]; },
+    };
+  }
+})();
 
 const STR = {
   he: {
     appTitle: '🎾 פאדלז׳יט',
     subtitle: 'אמריקנו · 4 שחקנים · הזוגות מתערבבים אחרי כל משחק',
+    newTour: '➕ טורניר חדש',
+    tours: '📁 הטורנירים שלי',
+    noTours: 'עוד אין טורנירים — צרו את הראשון!',
+    live: 'פעיל',
+    done: 'הסתיים',
+    games: 'משחקים',
+    leader: 'מוביל/ה',
+    winner: 'זכה/תה',
+    continueTour: 'המשך',
+    viewPodium: 'תוצאות',
+    del: 'מחיקה',
+    delConfirm: 'בטוח? לחצו שוב',
+    alltime: '🏅 טבלת האלופים (כל הטורנירים)',
+    athPlayer: 'שחקן', athTitles: '🏆', athPoints: 'נקודות', athGames: 'משחקים', athWon: 'ניצחונות',
     setupTitle: 'שמות השחקנים',
     player: 'שחקן',
     namePh: 'שם',
     targetLabel: 'ניקוד לכל משחק (סך הנקודות של שתי הקבוצות)',
-    gameTargetLabel: '🎯 ניקוד למשחק:',
     start: 'התחלת טורניר',
+    back: 'חזרה',
     errNames: 'נא להזין את כל ארבעת השמות.',
     errUnique: 'השמות חייבים להיות שונים זה מזה.',
     errTarget: 'ניקוד המשחק חייב להיות מספר בין 2 ל־500.',
     game: 'משחק',
+    round: 'סבב',
+    gameTargetLabel: '🎯 ניקוד למשחק:',
     vs: 'נגד',
     sumHint: 'סכום הנקודות של שתי הקבוצות חייב להיות {n}',
-    errEnter: 'נא להזין את תוצאת המשחק.',
+    errEnter: 'נא להזין את תוצאת המשחק (מספרים שלמים).',
     errRange: 'הניקוד חייב להיות בין 0 ל־{n}.',
     errSum: 'שתי התוצאות חייבות להסתכם בדיוק ל־{n}.',
     saveGame: 'שמירת משחק וערבוב שחקנים',
+    savedToast: 'משחק {n} נשמר ✓',
     ranking: '🏆 דירוג',
-    thPlayer: 'שחקן', thPoints: 'נקודות', thGames: 'משחקים', thWon: 'ניצחונות',
+    thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'ניצחונות',
     history: '📋 היסטוריית משחקים',
     empty: 'עוד לא שוחקו משחקים',
-    reset: 'איפוס טורניר',
-    confirmReset: 'לאפס את הטורניר? כל הנקודות וההיסטוריה יימחקו.',
-    resetYes: 'כן, לאפס הכול',
-    resetNo: 'ביטול',
     editTitle: 'עריכת התוצאה',
+    editSave: 'שמירת התיקון',
+    editCancel: 'ביטול העריכה',
+    finish: '🏁 סיום הטורניר',
+    finishQ: 'לסיים את הטורניר ולהכריז על המנצח/ת?',
+    finishYes: 'כן, להכריז!',
+    finishNo: 'עוד לא',
+    finishHintMid: 'טיפ: כדאי לסיים אחרי סבב שלם (כל 3 משחקים) — כך כולם שיחקו עם כולם.',
+    home: '🏠 מסך הבית',
+    podium: '🎉 תוצאות הטורניר',
+    finalTable: 'הטבלה הסופית',
+    shareTitle: '📤 שיתוף התוצאות',
+    waShare: 'שליחה בוואטסאפ',
+    copy: 'העתקת התוצאות',
+    copied: 'הועתק ✓',
+    copyManual: 'העתיקו ידנית מהתיבה למטה:',
+    rematch: '🔄 משחק חוזר (אותם שחקנים)',
+    resume: 'המשך את הטורניר הזה',
+    shareHeadDone: 'תוצאות סופיות',
+    shareHeadLive: 'מצב ביניים',
+    sharePts: 'נק׳',
+    shareWins: 'ניצחונות',
+    shareGames: '{n} משחקים',
     langBtn: 'English',
-    dir: 'rtl', lang: 'he',
+    dir: 'rtl', lang: 'he', locale: 'he-IL',
   },
   en: {
     appTitle: '🎾 puddlezit',
     subtitle: 'Americano · 4 players · partners shuffle after every game',
+    newTour: '➕ New tournament',
+    tours: '📁 My tournaments',
+    noTours: 'No tournaments yet — create your first!',
+    live: 'Live',
+    done: 'Finished',
+    games: 'games',
+    leader: 'leading',
+    winner: 'won',
+    continueTour: 'Continue',
+    viewPodium: 'Results',
+    del: 'Delete',
+    delConfirm: 'Sure? Tap again',
+    alltime: '🏅 All-time leaderboard (all tournaments)',
+    athPlayer: 'Player', athTitles: '🏆', athPoints: 'Points', athGames: 'Games', athWon: 'Won',
     setupTitle: 'Player names',
     player: 'Player',
     namePh: 'Name',
     targetLabel: 'Points per game (both teams combined)',
-    gameTargetLabel: '🎯 Points per game:',
     start: 'Start tournament',
+    back: 'Back',
     errNames: 'Please enter all four player names.',
     errUnique: 'Player names must be different from each other.',
     errTarget: 'Points per game must be a number between 2 and 500.',
     game: 'Game',
+    round: 'Round',
+    gameTargetLabel: '🎯 Points per game:',
     vs: 'VS',
     sumHint: 'Scores of both teams must add up to {n}',
-    errEnter: 'Enter the score for the game.',
+    errEnter: 'Enter the score for the game (whole numbers).',
     errRange: 'Scores must be between 0 and {n}.',
     errSum: 'The two scores must add up to exactly {n}.',
     saveGame: 'Save game & shuffle players',
+    savedToast: 'Game {n} saved ✓',
     ranking: '🏆 Ranking',
-    thPlayer: 'Player', thPoints: 'Points', thGames: 'Games', thWon: 'Won',
+    thPlayer: 'Player', thPoints: 'Points', thWon: 'Won',
     history: '📋 Game history',
     empty: 'No games played yet',
-    reset: 'Reset tournament',
-    confirmReset: 'Reset the tournament? All scores and history will be lost.',
-    resetYes: 'Yes, reset everything',
-    resetNo: 'Cancel',
     editTitle: 'Edit score',
+    editSave: 'Save correction',
+    editCancel: 'Cancel edit',
+    finish: '🏁 Finish tournament',
+    finishQ: 'Finish the tournament and crown the winner?',
+    finishYes: 'Yes, crown them!',
+    finishNo: 'Not yet',
+    finishHintMid: 'Tip: finishing after a full round (every 3 games) means everyone partnered everyone.',
+    home: '🏠 Home',
+    podium: '🎉 Tournament results',
+    finalTable: 'Final table',
+    shareTitle: '📤 Share the results',
+    waShare: 'Send on WhatsApp',
+    copy: 'Copy results',
+    copied: 'Copied ✓',
+    copyManual: 'Copy manually from the box below:',
+    rematch: '🔄 Rematch (same players)',
+    resume: 'Resume this tournament',
+    shareHeadDone: 'Final results',
+    shareHeadLive: 'Standings so far',
+    sharePts: 'pts',
+    shareWins: 'wins',
+    shareGames: '{n} games',
     langBtn: 'עברית',
-    dir: 'ltr', lang: 'en',
+    dir: 'ltr', lang: 'en', locale: 'en-GB',
   },
 };
 
@@ -381,20 +628,136 @@ const PAIRINGS = [
   [[0, 3], [1, 2]],
 ];
 
-let state = null;
-let lang = localStorage.getItem(LANG_KEY) || 'he';
+let db = { tournaments: [], lastPlayers: null, lastTarget: 32 };
+let lang = store.getItem(LANG_KEY) || 'he';
+let view = 'home';          // 'home' | 'setup' | 'game' | 'podium'
+let activeId = null;        // tournament shown in game/podium view
 let editingIndex = -1;
+let pendingDeleteId = null;
+let pendingDeleteTimer = null;
+let toastTimer = null;
 
 function t(key, n) {
   const s = STR[lang][key];
   return n === undefined ? s : s.replace('{n}', n);
 }
 
-function target() { return (state && state.target) || 32; }
+function current() {
+  return db.tournaments.find(x => x.id === activeId) || null;
+}
+
+function saveDb() {
+  store.setItem(DB_KEY, JSON.stringify(db));
+}
+
+// Rebuild a tournament from untrusted stored data; returns null if unusable.
+// Repairs missing/out-of-range pairing state and recomputes all totals from history.
+function sanitizeTournament(x) {
+  if (!x || typeof x !== 'object') return null;
+  if (!Array.isArray(x.players) || x.players.length !== 4 ||
+      x.players.some(p => typeof p !== 'string' || !p.trim())) return null;
+  const target = (Number.isInteger(x.target) && x.target >= 2 && x.target <= 500) ? x.target : 32;
+  const tour = newTournamentObj(x.players.slice(), target);
+  if (typeof x.id === 'string' && x.id) tour.id = x.id;
+  if (Number.isInteger(x.createdAt)) tour.createdAt = x.createdAt;
+  tour.finished = !!x.finished;
+  tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
+  tour.history = (Array.isArray(x.history) ? x.history : [])
+    .filter(g => g && Array.isArray(g.teamA) && Array.isArray(g.teamB) &&
+      g.teamA.length === 2 && g.teamB.length === 2 &&
+      [...g.teamA, ...g.teamB].slice().sort().join(',') === '0,1,2,3' &&
+      Number.isInteger(g.scoreA) && Number.isInteger(g.scoreB) && g.scoreA >= 0 && g.scoreB >= 0)
+    .map(g => ({
+      teamA: g.teamA.slice(), teamB: g.teamB.slice(),
+      scoreA: g.scoreA, scoreB: g.scoreB,
+      target: (Number.isInteger(g.target) && g.target >= 2) ? g.target : target,
+    }));
+  if (Array.isArray(x.pairingOrder) && x.pairingOrder.slice().sort().join(',') === '0,1,2') {
+    tour.pairingOrder = x.pairingOrder.slice();
+  }
+  if (Number.isInteger(x.pairingCursor) && x.pairingCursor >= 0 && x.pairingCursor <= 2) {
+    tour.pairingCursor = x.pairingCursor;
+  }
+  recompute(tour);
+  return tour;
+}
+
+function loadDb() {
+  db = { tournaments: [], lastPlayers: null, lastTarget: 32 };
+  try {
+    const raw = store.getItem(DB_KEY);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tournaments)) {
+        db.tournaments = parsed.tournaments.map(sanitizeTournament).filter(Boolean);
+        if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length === 4) db.lastPlayers = parsed.lastPlayers;
+        if (Number.isInteger(parsed.lastTarget)) db.lastTarget = parsed.lastTarget;
+      }
+    }
+  } catch (e) { /* corrupted storage — start fresh */ }
+  // Migrate a v1 single-tournament save into the new multi-tournament model.
+  try {
+    const legacy = store.getItem(LEGACY_KEY);
+    if (legacy) {
+      const tour = sanitizeTournament(JSON.parse(legacy));
+      if (tour) {
+        db.tournaments.unshift(tour);
+        db.lastPlayers = tour.players.slice();
+        db.lastTarget = tour.target;
+        saveDb();
+      }
+      store.removeItem(LEGACY_KEY);
+    }
+  } catch (e) { /* ignore broken legacy state */ }
+}
+
+function newTournamentObj(players, targetPoints) {
+  return {
+    id: 'T' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
+    createdAt: Date.now(),
+    finished: false,
+    finishedAt: null,
+    players: players,
+    target: targetPoints,
+    points: [0, 0, 0, 0],
+    gamesPlayed: [0, 0, 0, 0],
+    gamesWon: [0, 0, 0, 0],
+    history: [],               // {teamA:[i,i], teamB:[i,i], scoreA, scoreB, target}
+    pairingOrder: shuffledPairingOrder(),
+    pairingCursor: 0,
+  };
+}
+
+function shuffledPairingOrder(avoidFirst) {
+  let order;
+  do {
+    order = [0, 1, 2];
+    for (let i = order.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [order[i], order[j]] = [order[j], order[i]];
+    }
+  } while (avoidFirst !== undefined && order[0] === avoidFirst);
+  return order;
+}
+
+function currentPairing(tour) {
+  return PAIRINGS[tour.pairingOrder[tour.pairingCursor]];
+}
+
+function advancePairing(tour) {
+  tour.pairingCursor++;
+  if (tour.pairingCursor >= tour.pairingOrder.length) {
+    // Reshuffle for the next cycle, never repeating the pairing just played.
+    tour.pairingOrder = shuffledPairingOrder(tour.pairingOrder[tour.pairingOrder.length - 1]);
+    tour.pairingCursor = 0;
+  }
+}
+
+/* ---------- language ---------- */
 
 function toggleLang() {
   lang = lang === 'he' ? 'en' : 'he';
-  localStorage.setItem(LANG_KEY, lang);
+  store.setItem(LANG_KEY, lang);
   applyLang();
   render();
 }
@@ -402,120 +765,111 @@ function toggleLang() {
 function applyLang() {
   document.documentElement.lang = STR[lang].lang;
   document.documentElement.dir = STR[lang].dir;
-  document.getElementById('lang-btn').textContent = t('langBtn');
-  document.getElementById('app-title').textContent = t('appTitle');
-  document.getElementById('subtitle').textContent = t('subtitle');
-  document.getElementById('setup-title').textContent = t('setupTitle');
+  const set = (id, key) => { document.getElementById(id).textContent = t(key); };
+  set('lang-btn', 'langBtn');
+  set('app-title', 'appTitle');
+  set('subtitle', 'subtitle');
+  set('new-tour-btn', 'newTour');
+  set('tours-title', 'tours');
+  set('alltime-title', 'alltime');
+  set('ath-player', 'athPlayer'); set('ath-titles', 'athTitles'); set('ath-points', 'athPoints');
+  set('ath-games', 'athGames'); set('ath-won', 'athWon');
+  set('setup-title', 'setupTitle');
   for (let i = 0; i < 4; i++) {
     document.getElementById('lp' + i).textContent = t('player') + ' ' + (i + 1);
     document.getElementById('p' + i).placeholder = t('namePh');
   }
-  document.getElementById('ltarget').textContent = t('targetLabel');
-  document.getElementById('lgame-target').textContent = t('gameTargetLabel');
-  document.getElementById('start-btn').textContent = t('start');
-  document.getElementById('vs-label').textContent = t('vs');
-  document.getElementById('save-btn').textContent = t('saveGame');
-  document.getElementById('ranking-title').textContent = t('ranking');
-  document.getElementById('th-player').textContent = t('thPlayer');
-  document.getElementById('th-points').textContent = t('thPoints');
-  document.getElementById('th-games').textContent = t('thGames');
-  document.getElementById('th-won').textContent = t('thWon');
-  document.getElementById('history-title').textContent = t('history');
-  document.getElementById('reset-btn').textContent = t('reset');
-  document.getElementById('reset-question').textContent = t('confirmReset');
-  document.getElementById('reset-yes').textContent = t('resetYes');
-  document.getElementById('reset-no').textContent = t('resetNo');
+  set('ltarget', 'targetLabel');
+  set('start-btn', 'start');
+  set('setup-back-btn', 'back');
+  set('lgame-target', 'gameTargetLabel');
+  set('vs-label', 'vs');
+  set('save-btn', 'saveGame');
+  set('ranking-title', 'ranking');
+  set('th-player', 'thPlayer'); set('th-points', 'thPoints'); set('th-won', 'thWon');
+  set('history-title', 'history');
+  set('finish-btn', 'finish');
+  set('finish-yes', 'finishYes');
+  set('finish-no', 'finishNo');
+  set('game-home-btn', 'home');
+  set('podium-title', 'podium');
+  set('final-title', 'finalTable');
+  set('fth-player', 'thPlayer'); set('fth-points', 'thPoints'); set('fth-won', 'thWon');
+  set('share-title', 'shareTitle');
+  set('wa-link', 'waShare');
+  set('copy-btn', 'copy');
+  set('rematch-btn', 'rematch');
+  set('resume-btn', 'resume');
+  set('podium-home-btn', 'home');
 }
 
-function defaultState(players, targetPoints) {
-  return {
-    players: players,                 // [name, name, name, name]
-    target: targetPoints,             // total points per game (default 32)
-    points: [0, 0, 0, 0],             // cumulative points per player
-    gamesPlayed: [0, 0, 0, 0],
-    gamesWon: [0, 0, 0, 0],
-    history: [],                      // {teamA:[i,i], teamB:[i,i], scoreA, scoreB}
-    pairingOrder: shuffledPairingOrder(),
-    pairingCursor: 0,
-  };
+/* ---------- navigation ---------- */
+
+function gotoHome() { view = 'home'; activeId = null; editingIndex = -1; render(); }
+function gotoSetup() {
+  view = 'setup';
+  const names = db.lastPlayers || ['', '', '', ''];
+  for (let i = 0; i < 4; i++) document.getElementById('p' + i).value = names[i] || '';
+  document.getElementById('target').value = db.lastTarget || 32;
+  document.getElementById('setup-error').textContent = '';
+  render();
+}
+function openTournament(id) {
+  activeId = id;
+  editingIndex = -1;
+  const tour = current();
+  view = tour && tour.finished ? 'podium' : 'game';
+  render();
 }
 
-function shuffledPairingOrder() {
-  const order = [0, 1, 2];
-  for (let i = order.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [order[i], order[j]] = [order[j], order[i]];
-  }
-  return order;
-}
-
-function currentPairing() {
-  return PAIRINGS[state.pairingOrder[state.pairingCursor]];
-}
-
-function advancePairing() {
-  state.pairingCursor++;
-  // After all 3 pairings have been played, reshuffle the cycle.
-  if (state.pairingCursor >= state.pairingOrder.length) {
-    state.pairingOrder = shuffledPairingOrder();
-    state.pairingCursor = 0;
-  }
-}
-
-function save() {
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-}
-
-function load() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) state = JSON.parse(raw);
-    if (state && !state.target) state.target = 32;
-  } catch (e) { state = null; }
-}
+/* ---------- setup ---------- */
 
 function startTournament() {
   const names = [0, 1, 2, 3].map(i => document.getElementById('p' + i).value.trim());
   const err = document.getElementById('setup-error');
-  if (names.some(n => !n)) {
-    err.textContent = t('errNames');
-    return;
-  }
+  if (names.some(n => !n)) { err.textContent = t('errNames'); return; }
   const unique = new Set(names.map(n => n.toLowerCase()));
-  if (unique.size < 4) {
-    err.textContent = t('errUnique');
-    return;
-  }
-  const targetPoints = parseInt(document.getElementById('target').value, 10);
-  if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) {
-    err.textContent = t('errTarget');
-    return;
-  }
+  if (unique.size < 4) { err.textContent = t('errUnique'); return; }
+  const targetPoints = parseScore(document.getElementById('target').value);
+  if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) { err.textContent = t('errTarget'); return; }
   err.textContent = '';
-  state = defaultState(names, targetPoints);
-  save();
+  const tour = newTournamentObj(names, targetPoints);
+  db.tournaments.unshift(tour);
+  db.lastPlayers = names.slice();
+  db.lastTarget = targetPoints;
+  saveDb();
+  activeId = tour.id;
+  view = 'game';
   render();
 }
 
-// The target a specific past game was played to (falls back to the current one).
-function gameTargetOf(index) {
-  const g = state.history[index];
-  return (g && g.target) || target();
+/* ---------- scoring ---------- */
+
+// Whole numbers only; rejects '', '12.5', 'abc'.
+function parseScore(v) {
+  if (v === null || v === undefined || String(v).trim() === '') return NaN;
+  const n = Number(v);
+  return Number.isInteger(n) ? n : NaN;
 }
 
-// Change the points-per-game target mid-tournament; applies to all games from now on.
+function gameTargetOf(tour, index) {
+  const g = tour.history[index];
+  return (g && g.target) || tour.target;
+}
+
 function changeTarget() {
+  const tour = current(); if (!tour) return;
   const input = document.getElementById('game-target');
-  const v = parseInt(input.value, 10);
+  const v = parseScore(input.value);
   const err = document.getElementById('score-error');
   if (isNaN(v) || v < 2 || v > 500) {
     err.textContent = t('errTarget');
-    input.value = target();
+    input.value = tour.target;
     return;
   }
   err.textContent = '';
-  state.target = v;
-  save();
+  tour.target = v;
+  saveDb();
   const a = document.getElementById('scoreA');
   const b = document.getElementById('scoreB');
   if (a.value !== '') autoFillPair(a, b, v);
@@ -523,17 +877,15 @@ function changeTarget() {
 }
 
 function autoFillPair(srcInput, dstInput, tgt) {
-  // When one team's score is typed, fill the other side with (target - score).
-  const v = parseInt(srcInput.value, 10);
-  if (!isNaN(v) && v >= 0 && v <= tgt) {
-    dstInput.value = tgt - v;
-  }
+  const v = parseScore(srcInput.value);
+  if (!isNaN(v) && v >= 0 && v <= tgt) dstInput.value = tgt - v;
 }
 
 function autoFill(side) {
+  const tour = current(); if (!tour) return;
   const a = document.getElementById('scoreA');
   const b = document.getElementById('scoreB');
-  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, target());
+  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, tour.target);
   document.getElementById('score-error').textContent = '';
 }
 
@@ -544,200 +896,444 @@ function validScores(scoreA, scoreB, tgt) {
   return null;
 }
 
-function applyGame(g) {
-  g.teamA.forEach(i => { state.points[i] += g.scoreA; state.gamesPlayed[i]++; });
-  g.teamB.forEach(i => { state.points[i] += g.scoreB; state.gamesPlayed[i]++; });
-  if (g.scoreA > g.scoreB) g.teamA.forEach(i => state.gamesWon[i]++);
-  else if (g.scoreB > g.scoreA) g.teamB.forEach(i => state.gamesWon[i]++);
+function applyGame(tour, g) {
+  g.teamA.forEach(i => { tour.points[i] += g.scoreA; tour.gamesPlayed[i]++; });
+  g.teamB.forEach(i => { tour.points[i] += g.scoreB; tour.gamesPlayed[i]++; });
+  if (g.scoreA > g.scoreB) g.teamA.forEach(i => tour.gamesWon[i]++);
+  else if (g.scoreB > g.scoreA) g.teamB.forEach(i => tour.gamesWon[i]++);
 }
 
-// Rebuild all totals from the game history (used after editing a past game).
-function recompute() {
-  state.points = [0, 0, 0, 0];
-  state.gamesPlayed = [0, 0, 0, 0];
-  state.gamesWon = [0, 0, 0, 0];
-  state.history.forEach(applyGame);
+function recompute(tour) {
+  tour.points = [0, 0, 0, 0];
+  tour.gamesPlayed = [0, 0, 0, 0];
+  tour.gamesWon = [0, 0, 0, 0];
+  tour.history.forEach(g => applyGame(tour, g));
 }
+
+// Point differential: how many more points a player's teams scored than conceded.
+function diffOf(tour, i) {
+  let d = 0;
+  tour.history.forEach(g => {
+    if (g.teamA.includes(i)) d += g.scoreA - g.scoreB;
+    else if (g.teamB.includes(i)) d += g.scoreB - g.scoreA;
+  });
+  return d;
+}
+
+function rankOrder(tour) {
+  return [0, 1, 2, 3].sort((x, y) =>
+    tour.points[y] - tour.points[x] ||
+    tour.gamesWon[y] - tour.gamesWon[x] ||
+    diffOf(tour, y) - diffOf(tour, x)
+  );
+}
+
+let lastSaveAt = 0;
 
 function saveGame() {
-  const scoreA = parseInt(document.getElementById('scoreA').value, 10);
-  const scoreB = parseInt(document.getElementById('scoreB').value, 10);
+  const tour = current(); if (!tour) return;
+  const rawA = document.getElementById('scoreA').value;
+  const rawB = document.getElementById('scoreB').value;
+  // A double-tap right after a successful save finds the cleared inputs —
+  // ignore it instead of flashing a misleading "enter the score" error.
+  if (rawA === '' && rawB === '' && Date.now() - lastSaveAt < 1200) return;
+  const scoreA = parseScore(rawA);
+  const scoreB = parseScore(rawB);
   const err = document.getElementById('score-error');
-
-  const errKey = validScores(scoreA, scoreB, target());
-  if (errKey) {
-    err.textContent = t(errKey, target());
-    return;
-  }
+  const errKey = validScores(scoreA, scoreB, tour.target);
+  if (errKey) { err.textContent = t(errKey, tour.target); return; }
   err.textContent = '';
 
-  const [teamA, teamB] = currentPairing();
-  const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB, target: target() };
-  applyGame(game);
-  state.history.push(game);
-  advancePairing();
-  save();
+  const [teamA, teamB] = currentPairing(tour);
+  const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB, target: tour.target };
+  applyGame(tour, game);
+  tour.history.push(game);
+  advancePairing(tour);
+  lastSaveAt = Date.now();
+  saveDb();
 
   document.getElementById('scoreA').value = '';
   document.getElementById('scoreB').value = '';
   render();
+  showToast(t('savedToast', tour.history.length));
+  const box = document.getElementById('teams-box');
+  box.classList.remove('flash');
+  void box.offsetWidth;
+  box.classList.add('flash');
 }
+
+/* ---------- history editing ---------- */
 
 function startEdit(index) {
   editingIndex = index;
   render();
+  const el = document.getElementById('edit-a');
+  if (el) { el.focus(); el.select(); }
 }
 
-function cancelEdit() {
-  editingIndex = -1;
-  render();
-}
+function cancelEdit() { editingIndex = -1; render(); }
 
 function editAutoFill(side) {
+  const tour = current(); if (!tour) return;
   const a = document.getElementById('edit-a');
   const b = document.getElementById('edit-b');
-  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, gameTargetOf(editingIndex));
+  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, gameTargetOf(tour, editingIndex));
   document.getElementById('edit-error').textContent = '';
 }
 
 function saveEdit(index) {
-  const scoreA = parseInt(document.getElementById('edit-a').value, 10);
-  const scoreB = parseInt(document.getElementById('edit-b').value, 10);
-  const tgt = gameTargetOf(index);
+  const tour = current(); if (!tour) return;
+  const scoreA = parseScore(document.getElementById('edit-a').value);
+  const scoreB = parseScore(document.getElementById('edit-b').value);
+  const tgt = gameTargetOf(tour, index);
   const errKey = validScores(scoreA, scoreB, tgt);
-  if (errKey) {
-    document.getElementById('edit-error').textContent = t(errKey, tgt);
+  if (errKey) { document.getElementById('edit-error').textContent = t(errKey, tgt); return; }
+  tour.history[index].scoreA = scoreA;
+  tour.history[index].scoreB = scoreB;
+  recompute(tour);
+  editingIndex = -1;
+  saveDb();
+  render();
+}
+
+/* ---------- finish / podium ---------- */
+
+function finishAsk() {
+  const tour = current(); if (!tour) return;
+  document.getElementById('finish-btn').classList.add('hidden');
+  document.getElementById('finish-confirm').classList.remove('hidden');
+  const q = document.getElementById('finish-question');
+  q.textContent = t('finishQ') + (tour.history.length % 3 !== 0 ? ' ' + t('finishHintMid') : '');
+}
+
+function finishCancel() {
+  document.getElementById('finish-confirm').classList.add('hidden');
+  document.getElementById('finish-btn').classList.remove('hidden');
+}
+
+function finishTournament() {
+  const tour = current(); if (!tour) return;
+  tour.finished = true;
+  tour.finishedAt = Date.now();
+  saveDb();
+  finishCancel();
+  view = 'podium';
+  render();
+}
+
+function resumeTournament() {
+  const tour = current(); if (!tour) return;
+  tour.finished = false;
+  tour.finishedAt = null;
+  saveDb();
+  view = 'game';
+  render();
+}
+
+function rematch() {
+  const tour = current(); if (!tour) return;
+  const players = tour.players.slice();
+  const target = tour.target;
+  const fresh = newTournamentObj(players, target);
+  db.tournaments.unshift(fresh);
+  db.lastPlayers = players;
+  db.lastTarget = target;
+  saveDb();
+  activeId = fresh.id;
+  view = 'game';
+  editingIndex = -1;
+  render();
+}
+
+/* ---------- delete (two-tap confirm) ---------- */
+
+function deleteTournament(id) {
+  if (pendingDeleteId !== id) {
+    pendingDeleteId = id;
+    clearTimeout(pendingDeleteTimer);
+    pendingDeleteTimer = setTimeout(() => { pendingDeleteId = null; render(); }, 3000);
+    render();
     return;
   }
-  state.history[index].scoreA = scoreA;
-  state.history[index].scoreB = scoreB;
-  recompute();
-  editingIndex = -1;
-  save();
+  clearTimeout(pendingDeleteTimer);
+  pendingDeleteId = null;
+  db.tournaments = db.tournaments.filter(x => x.id !== id);
+  if (activeId === id) activeId = null;
+  saveDb();
   render();
 }
 
-function askReset() {
-  document.getElementById('reset-btn').classList.add('hidden');
-  document.getElementById('reset-confirm').classList.remove('hidden');
+/* ---------- sharing ---------- */
+
+function shareText(tour) {
+  const order = rankOrder(tour);
+  const medals = ['🥇', '🥈', '🥉', '4.'];
+  const head = tour.finished ? t('shareHeadDone') : t('shareHeadLive');
+  const lines = [
+    '🎾 ' + (lang === 'he' ? 'פאדלז׳יט' : 'puddlezit') + ' — ' + head,
+    new Date(tour.createdAt).toLocaleDateString(STR[lang].locale),
+    '',
+  ];
+  order.forEach((i, idx) => {
+    lines.push(medals[idx] + ' ' + tour.players[i] + ' — ' + tour.points[i] + ' ' + t('sharePts') + ' (' + tour.gamesWon[i] + ' ' + t('shareWins') + ')');
+  });
+  lines.push('');
+  lines.push(t('shareGames', tour.history.length) + ' · 🎯 ' + tour.target);
+  return lines.join('\n');
 }
 
-function cancelReset() {
-  document.getElementById('reset-confirm').classList.add('hidden');
-  document.getElementById('reset-btn').classList.remove('hidden');
+function copyResults() {
+  const tour = current(); if (!tour) return;
+  const text = shareText(tour);
+  const fallback = () => {
+    const ta = document.getElementById('share-fallback');
+    ta.value = text;
+    ta.classList.remove('hidden');
+    ta.focus(); ta.select();
+    showToast(t('copyManual'));
+  };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(text).then(() => showToast(t('copied'))).catch(fallback);
+  } else {
+    fallback();
+  }
 }
 
-function resetTournament() {
-  state = null;
-  editingIndex = -1;
-  localStorage.removeItem(STORAGE_KEY);
-  cancelReset();
-  render();
+/* ---------- toast ---------- */
+
+function showToast(msg) {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => el.classList.remove('show'), 2200);
 }
 
-function teamLabel(team) {
-  return team.map(i => escapeHtml(state.players[i])).join('<br>');
+/* ---------- rendering ---------- */
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
 }
 
-function teamLabelInline(team) {
-  return team.map(i => state.players[i]).join(' & ');
+function teamLabel(tour, team) {
+  return team.map(i => escapeHtml(tour.players[i])).join('<br>');
 }
 
-function renderLeaderboard() {
-  // Rank by points; tie-break by games won, then fewer games played.
-  const order = [0, 1, 2, 3].sort((x, y) =>
-    state.points[y] - state.points[x] ||
-    state.gamesWon[y] - state.gamesWon[x] ||
-    state.gamesPlayed[x] - state.gamesPlayed[y]
-  );
-  const tbody = document.getElementById('leaderboard-body');
+function teamLabelInline(tour, team) {
+  const sep = lang === 'he' ? ' ו־' : ' & ';
+  return team.map(i => tour.players[i]).join(sep);
+}
+
+function renderLeaderboardInto(tbodyId, tour) {
+  const order = rankOrder(tour);
+  const tbody = document.getElementById(tbodyId);
   tbody.innerHTML = '';
   let prevKey = null, prevRank = 0;
   order.forEach((i, idx) => {
-    const key = state.points[i] + '/' + state.gamesWon[i];
+    const d = diffOf(tour, i);
+    const key = tour.points[i] + '/' + tour.gamesWon[i] + '/' + d;
     const rank = key === prevKey ? prevRank : idx + 1;
     prevKey = key; prevRank = rank;
     const tr = document.createElement('tr');
     tr.innerHTML =
       '<td><span class="rank-badge rank-' + rank + '">' + rank + '</span></td>' +
-      '<td>' + escapeHtml(state.players[i]) + '</td>' +
-      '<td class="num pts">' + state.points[i] + '</td>' +
-      '<td class="num">' + state.gamesPlayed[i] + '</td>' +
-      '<td class="num">' + state.gamesWon[i] + '</td>';
+      '<td>' + escapeHtml(tour.players[i]) + '</td>' +
+      '<td class="num pts">' + tour.points[i] + '</td>' +
+      '<td class="num diff ' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '">' + (d > 0 ? '+' : '') + d + '</td>' +
+      '<td class="num">' + tour.gamesWon[i] + '</td>';
     tbody.appendChild(tr);
   });
 }
 
-function renderHistory() {
+function renderHistory(tour) {
   const list = document.getElementById('history-list');
-  if (state.history.length === 0) {
+  if (tour.history.length === 0) {
     list.innerHTML = '<div class="empty-note">' + t('empty') + '</div>';
     return;
   }
+  // Preserve values typed into an open edit row across re-renders
+  // (language toggle, target change) instead of silently discarding them.
+  const stashA = document.getElementById('edit-a') ? document.getElementById('edit-a').value : null;
+  const stashB = document.getElementById('edit-b') ? document.getElementById('edit-b').value : null;
   list.innerHTML = '';
-  [...state.history].reverse().forEach((g, revIdx) => {
-    const index = state.history.length - 1 - revIdx;
+  [...tour.history].reverse().forEach((g, revIdx) => {
+    const index = tour.history.length - 1 - revIdx;
     const gameNo = index + 1;
     const aWins = g.scoreA > g.scoreB;
     const bWins = g.scoreB > g.scoreA;
+    const gTarget = g.target || tour.target;
     const div = document.createElement('div');
     div.className = 'history-item';
     let html =
-      '<span class="game-no">#' + gameNo + '</span>' +
+      '<span class="game-no"><bdi>#' + gameNo + '</bdi></span>' +
       '<span class="result">' +
-        '<span class="' + (aWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(g.teamA)) + '</span>' +
+        '<span class="' + (aWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(tour, g.teamA)) + '</span>' +
         ' ' + (lang === 'he' ? 'נגד' : 'vs') + ' ' +
-        '<span class="' + (bWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(g.teamB)) + '</span>' +
+        '<span class="' + (bWins ? 'winner' : '') + '">' + escapeHtml(teamLabelInline(tour, g.teamB)) + '</span>' +
       '</span>';
     if (editingIndex === index) {
+      const valA = stashA !== null ? stashA : g.scoreA;
+      const valB = stashB !== null ? stashB : g.scoreB;
       html +=
         '<div class="edit-row">' +
-          '<input type="number" id="edit-a" min="0" inputmode="numeric" value="' + g.scoreA + '" oninput="editAutoFill(\'A\')">' +
+          '<input type="number" id="edit-a" min="0" inputmode="numeric" value="' + escapeHtml(String(valA)) + '" oninput="editAutoFill(\'A\')">' +
           '<span class="dash">—</span>' +
-          '<input type="number" id="edit-b" min="0" inputmode="numeric" value="' + g.scoreB + '" oninput="editAutoFill(\'B\')">' +
-          '<button type="button" class="icon-btn ok" onclick="saveEdit(' + index + ')" aria-label="save">✔</button>' +
-          '<button type="button" class="icon-btn cancel" onclick="cancelEdit()" aria-label="cancel">✕</button>' +
+          '<input type="number" id="edit-b" min="0" inputmode="numeric" value="' + escapeHtml(String(valB)) + '" oninput="editAutoFill(\'B\')">' +
+          '<button type="button" class="icon-btn ok" onclick="saveEdit(' + index + ')" aria-label="' + escapeHtml(t('editSave')) + '">✔</button>' +
+          '<button type="button" class="icon-btn cancel" onclick="cancelEdit()" aria-label="' + escapeHtml(t('editCancel')) + '">✕</button>' +
         '</div>' +
-        '<div class="edit-error" id="edit-error"></div>';
+        '<div class="edit-error" id="edit-error" role="alert"></div>';
     } else {
       html +=
         '<span class="history-score">' + g.scoreA + '–' + g.scoreB + '</span>' +
-        '<button type="button" class="icon-btn" onclick="startEdit(' + index + ')" title="' + t('editTitle') + '" aria-label="' + t('editTitle') + '">✎</button>';
+        (gTarget !== tour.target ? '<span class="history-target">🎯' + gTarget + '</span>' : '') +
+        '<button type="button" class="icon-btn" onclick="startEdit(' + index + ')" title="' + escapeHtml(t('editTitle')) + '" aria-label="' + escapeHtml(t('editTitle')) + '">✎</button>';
     }
     div.innerHTML = html;
     list.appendChild(div);
   });
 }
 
-function escapeHtml(s) {
-  return s.replace(/[&<>"']/g, c => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
-  }[c]));
+function renderGame(tour) {
+  const n = tour.history.length;
+  const round = Math.floor(n / 3) + 1;
+  const inRound = (n % 3) + 1;
+  document.getElementById('round-label').textContent =
+    t('game') + ' ' + (n + 1) + ' · ' + t('round') + ' ' + round + ' (' + inRound + '/3)';
+  document.getElementById('game-target').value = tour.target;
+  document.getElementById('sum-hint').textContent = t('sumHint', tour.target);
+  const [teamA, teamB] = currentPairing(tour);
+  document.getElementById('teamA-names').innerHTML = teamLabel(tour, teamA);
+  document.getElementById('teamB-names').innerHTML = teamLabel(tour, teamB);
+  document.getElementById('scoreA').setAttribute('aria-label', teamLabelInline(tour, teamA));
+  document.getElementById('scoreB').setAttribute('aria-label', teamLabelInline(tour, teamB));
+  renderLeaderboardInto('leaderboard-body', tour);
+  renderHistory(tour);
+}
+
+function renderPodium(tour) {
+  const order = rankOrder(tour);
+  const scoreLine = i => tour.points[i] + ' ' + t('sharePts') + ' · ' + tour.gamesWon[i] + ' ' + t('shareWins');
+  document.getElementById('pod-1-name').textContent = tour.players[order[0]];
+  document.getElementById('pod-1-score').textContent = scoreLine(order[0]);
+  document.getElementById('pod-2-name').textContent = tour.players[order[1]];
+  document.getElementById('pod-2-score').textContent = scoreLine(order[1]);
+  document.getElementById('pod-3-name').textContent = tour.players[order[2]];
+  document.getElementById('pod-3-score').textContent = scoreLine(order[2]);
+  renderLeaderboardInto('final-body', tour);
+  const wa = document.getElementById('wa-link');
+  wa.href = 'https://wa.me/?text=' + encodeURIComponent(shareText(tour));
+  document.getElementById('share-fallback').classList.add('hidden');
+}
+
+function renderHome() {
+  const list = document.getElementById('tournament-list');
+  if (db.tournaments.length === 0) {
+    list.innerHTML = '<div class="empty-note">' + t('noTours') + '</div>';
+  } else {
+    list.innerHTML = '';
+    db.tournaments.forEach(tour => {
+      const order = rankOrder(tour);
+      const top = tour.players[order[0]];
+      const div = document.createElement('div');
+      div.className = 'tour-item';
+      const date = new Date(tour.createdAt).toLocaleDateString(STR[lang].locale);
+      const statusCls = tour.finished ? 'done' : 'live';
+      const statusTxt = tour.finished ? t('done') : t('live');
+      const subject = tour.history.length > 0
+        ? (tour.finished ? '🥇 ' + escapeHtml(top) + ' ' + t('winner') + ' · ' : '👑 ' + escapeHtml(top) + ' ' + t('leader') + ' · ')
+        : '';
+      const delLabel = pendingDeleteId === tour.id ? t('delConfirm') : t('del');
+      div.innerHTML =
+        '<div class="tour-head">' +
+          '<span class="tour-date">' + date + '</span>' +
+          '<span class="tour-status ' + statusCls + '">' + statusTxt + '</span>' +
+        '</div>' +
+        '<div class="tour-sub">' + subject + tour.players.map(escapeHtml).join(', ') + ' · ' + tour.history.length + ' ' + t('games') + '</div>' +
+        '<div class="tour-actions">' +
+          '<button type="button" onclick="openTournament(\'' + tour.id + '\')">' + (tour.finished ? t('viewPodium') : t('continueTour')) + '</button>' +
+          '<button type="button" class="del" onclick="deleteTournament(\'' + tour.id + '\')">' + delLabel + '</button>' +
+        '</div>';
+      list.appendChild(div);
+    });
+  }
+
+  // All-time leaderboard across every tournament, keyed by player name.
+  const agg = {};
+  db.tournaments.forEach(tour => {
+    tour.players.forEach((name, i) => {
+      const key = name.trim();
+      if (!agg[key]) agg[key] = { pts: 0, games: 0, won: 0, titles: 0 };
+      agg[key].pts += tour.points[i];
+      agg[key].games += tour.gamesPlayed[i];
+      agg[key].won += tour.gamesWon[i];
+    });
+    if (tour.finished && tour.history.length > 0) {
+      const champ = tour.players[rankOrder(tour)[0]].trim();
+      agg[champ].titles++;
+    }
+  });
+  const names = Object.keys(agg).sort((a, b) =>
+    agg[b].titles - agg[a].titles || agg[b].pts - agg[a].pts || agg[b].won - agg[a].won);
+  const card = document.getElementById('alltime-card');
+  if (names.length === 0) {
+    card.classList.add('hidden');
+  } else {
+    card.classList.remove('hidden');
+    const tbody = document.getElementById('alltime-body');
+    tbody.innerHTML = '';
+    names.forEach(name => {
+      const a = agg[name];
+      const tr = document.createElement('tr');
+      tr.innerHTML =
+        '<td>' + escapeHtml(name) + '</td>' +
+        '<td class="num">' + (a.titles > 0 ? '🏆'.repeat(Math.min(a.titles, 3)) + (a.titles > 3 ? '×' + a.titles : '') : '—') + '</td>' +
+        '<td class="num pts">' + a.pts + '</td>' +
+        '<td class="num">' + a.games + '</td>' +
+        '<td class="num">' + a.won + '</td>';
+      tbody.appendChild(tr);
+    });
+  }
 }
 
 function render() {
-  const setup = document.getElementById('setup-screen');
-  const game = document.getElementById('game-screen');
-  if (!state) {
-    setup.classList.remove('hidden');
-    game.classList.add('hidden');
-    return;
-  }
-  setup.classList.add('hidden');
-  game.classList.remove('hidden');
-
-  document.getElementById('round-label').textContent = t('game') + ' ' + (state.history.length + 1);
-  document.getElementById('game-target').value = target();
-  document.getElementById('sum-hint').textContent = t('sumHint', target());
-  const [teamA, teamB] = currentPairing();
-  document.getElementById('teamA-names').innerHTML = teamLabel(teamA);
-  document.getElementById('teamB-names').innerHTML = teamLabel(teamB);
-
-  renderLeaderboard();
-  renderHistory();
+  const screens = { home: 'home-screen', setup: 'setup-screen', game: 'game-screen', podium: 'podium-screen' };
+  Object.values(screens).forEach(id => document.getElementById(id).classList.add('hidden'));
+  const tour = current();
+  if ((view === 'game' || view === 'podium') && !tour) view = 'home';
+  document.getElementById(screens[view]).classList.remove('hidden');
+  if (view === 'home') renderHome();
+  else if (view === 'game') renderGame(tour);
+  else if (view === 'podium') renderPodium(tour);
 }
 
-load();
+document.getElementById('setup-form').addEventListener('submit', e => {
+  e.preventDefault();
+  startTournament();
+});
+
+// Another tab wrote to storage — re-read so this tab doesn't clobber its games.
+window.addEventListener('storage', e => {
+  if (e.key !== DB_KEY) return;
+  const prevActive = activeId;
+  loadDb();
+  if (prevActive && !db.tournaments.some(x => x.id === prevActive)) {
+    activeId = null;
+    if (view === 'game' || view === 'podium') view = 'home';
+  }
+  render();
+});
+
+loadDb();
+// Reopen the most recent tournament automatically if it's still live.
+if (db.tournaments.length > 0 && !db.tournaments[0].finished) {
+  activeId = db.tournaments[0].id;
+  view = 'game';
+} else {
+  view = 'home';
+}
 applyLang();
 render();
 </script>
