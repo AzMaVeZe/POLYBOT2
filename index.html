@@ -519,6 +519,8 @@
   #install-row { margin-bottom: 16px; }
   #install-btn { margin-bottom: 8px; }
   .claim-btn { width: auto; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; background: var(--card-2); color: var(--accent); border-radius: 999px; margin-inline-start: 6px; }
+  #me-picker { margin-bottom: 12px; }
+  #me-picker select { width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid #334155; background: var(--card-2); color: var(--text); font-size: 1rem; }
   .me-star { color: var(--gold); margin-inline-start: 4px; }
   .mystats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
   .mystats-grid .v { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
@@ -643,6 +645,7 @@
 
     <div class="card">
       <h2 id="ranking-title"></h2>
+      <div id="me-picker"></div>
       <table>
         <thead>
           <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff">+/-</th><th class="num" id="th-won"></th><th class="num" id="th-games"></th></tr>
@@ -766,7 +769,10 @@ const STR = {
     fmtMexicano: 'מקסיקנו',
     fmtHint: 'מקסיקנו: מסבב 2 הזוגות נקבעים לפי הדירוג (1+4 נגד 2+3) — משחקים צמודים יותר.',
     fmtLabelMex: 'מקסיקנו',
-    claimMe: 'זה אני',
+    whoAreYou: '🙋 סמן מי אתה (בחירה אחת):',
+    pickMe: '— בחר/י שחקן —',
+    youAre: 'אתה',
+    changeMe: 'שינוי',
     claimedMe: 'סומנת בטורניר הזה ⭐',
     myStatsTitle: '🌟 הסטטיסטיקות שלי',
     myStatsTours: 'טורנירים', myStatsPts: 'נקודות', myStatsWon: 'ניצחונות', myStatsTitles: 'תארים',
@@ -899,7 +905,10 @@ const STR = {
     fmtMexicano: 'Mexicano',
     fmtHint: 'Mexicano: from round 2, pairs are set by ranking (1+4 vs 2+3) — closer games.',
     fmtLabelMex: 'Mexicano',
-    claimMe: 'This is me',
+    whoAreYou: '🙋 Mark who you are (pick one):',
+    pickMe: '— pick a player —',
+    youAre: 'You',
+    changeMe: 'Change',
     claimedMe: 'Marked as you in this tournament ⭐',
     myStatsTitle: '🌟 My stats',
     myStatsTours: 'tournaments', myStatsPts: 'points', myStatsWon: 'wins', myStatsTitles: 'titles',
@@ -2119,7 +2128,7 @@ async function deleteAccountAsk() {
 
 function claimMe(i) {
   const tour = current();
-  if (!tour || !session) return;
+  if (!tour || !session || !Number.isInteger(i) || i < 0 || i >= tour.players.length) return;
   tour.claims = tour.claims || {};
   tour.claims[session.user.email] = i;
   touch(tour);
@@ -2127,6 +2136,32 @@ function claimMe(i) {
   render();
   showToast(t('claimedMe'));
   haptic(10);
+}
+
+function clearMe() {
+  const tour = current();
+  if (!tour || !session || !tour.claims) return;
+  delete tour.claims[session.user.email];
+  touch(tour);
+  saveDb();
+  render();
+}
+
+// Single-select "who are you" picker for the ranking card (signed-in only).
+function renderMePicker(tour) {
+  const el = document.getElementById('me-picker');
+  if (!session) { el.innerHTML = ''; return; }
+  const mine = (tour.claims || {})[session.user.email];
+  if (mine !== undefined) {
+    el.innerHTML = '<div class="hint" style="text-align:start">' + escapeHtml(t('youAre')) + ': <b>' +
+      escapeHtml(tour.players[mine]) + '</b> ⭐ <button type="button" class="claim-btn" onclick="clearMe()">' +
+      escapeHtml(t('changeMe')) + '</button></div>';
+  } else {
+    let opts = '<option value="">' + escapeHtml(t('pickMe')) + '</option>';
+    tour.players.forEach((p, i) => { opts += '<option value="' + i + '">' + escapeHtml(p) + '</option>'; });
+    el.innerHTML = '<label class="hint" style="text-align:start" for="me-select">' + escapeHtml(t('whoAreYou')) +
+      '</label><select id="me-select" onchange="claimMe(parseInt(this.value,10))">' + opts + '</select>';
+  }
 }
 
 /* ---------- public results link ---------- */
@@ -2238,10 +2273,9 @@ function renderLeaderboardInto(tbodyId, tour) {
     prevKey = key; prevRank = rank;
     const cacheKey = tbodyId + ':' + tour.id + ':' + tour.players[i];
     const prevPts = ptsCache[cacheKey];
-    // "This is me": signed-in users can claim one slot per tournament for their personal stats.
+    // The claimed "me" slot gets a star; picking is done via the single #me-picker select.
     let nameCell = escapeHtml(tour.players[i]);
     if (myClaim === i) nameCell += '<span class="me-star" title="' + escapeHtml(t('claimedMe')) + '">⭐</span>';
-    else if (session && myClaim === undefined) nameCell += '<button type="button" class="claim-btn" onclick="claimMe(' + i + ')">' + escapeHtml(t('claimMe')) + '</button>';
     const tr = document.createElement('tr');
     tr.setAttribute('data-player', tour.players[i]);
     tr.innerHTML =
@@ -2336,6 +2370,7 @@ function renderGame(tour) {
   } else {
     restEl.classList.add('hidden');
   }
+  renderMePicker(tour);
   renderLeaderboardInto('leaderboard-body', tour);
   renderHistory(tour);
   // Live-share card: only for signed-in organizers.
