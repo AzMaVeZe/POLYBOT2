@@ -29,6 +29,19 @@ python3 -m http.server 8000
 
 Works well on a phone at the court.
 
+## Install as an app (PWA)
+
+The hosted site is a Progressive Web App — no store, no signup, works on Android
+and iPhone:
+
+- **Android (Chrome):** open the site → menu (⋮) → **Install app** / **Add to Home screen**.
+- **iPhone (Safari):** open the site → Share → **Add to Home Screen**.
+
+You get a home-screen icon, a full-screen app (no browser bars), and offline use
+(a service worker caches the app shell). Cloud sync still needs a connection.
+PWA assets live in `pwa/` (manifest, service worker, icons) and are published
+alongside `index.html` by the Pages workflow.
+
 ## Android APK
 
 The `android/` folder wraps the app in a native WebView for direct installation
