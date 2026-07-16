@@ -334,6 +334,34 @@
   #resting-label { text-align: center; color: var(--muted); font-size: 0.85rem; margin: -4px 0 12px; }
 
   /* Backup / restore */
+  .oauth-sep {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    color: var(--muted);
+    font-size: 0.8rem;
+    margin: 14px 0 10px;
+  }
+  .oauth-sep::before, .oauth-sep::after {
+    content: "";
+    flex: 1;
+    height: 1px;
+    background: #334155;
+  }
+  .oauth-sep span { padding: 0 12px; }
+  .oauth-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    background: #fff;
+    color: #1f2937;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+  .oauth-btn.facebook { background: #1877f2; color: #fff; }
+  .oauth-btn .g { display: inline-flex; }
+
   #backup-box, #import-box {
     width: 100%;
     min-height: 90px;
@@ -428,6 +456,9 @@
         <div class="error-msg" id="cloud-error" role="alert"></div>
         <button type="button" onclick="cloudLogin()" id="cloud-login-btn"></button>
         <button type="button" class="secondary" onclick="cloudSignup()" id="cloud-signup-btn"></button>
+        <div class="oauth-sep" id="oauth-sep"><span id="oauth-or"></span></div>
+        <button type="button" class="oauth-btn google" onclick="doOAuth('google')" id="google-btn"></button>
+        <button type="button" class="oauth-btn facebook" onclick="doOAuth('facebook')" id="facebook-btn"></button>
       </div>
       <div id="cloud-logged-in" class="hidden">
         <div class="hint" id="cloud-status" style="text-align:start" aria-live="polite"></div>
@@ -638,6 +669,10 @@ const STR = {
     cloudPass: 'סיסמה (לפחות 6 תווים)',
     cloudLogin: 'התחברות',
     cloudSignup: 'הרשמה (פעם ראשונה)',
+    cloudOr: 'או',
+    googleBtn: 'המשך עם Google',
+    facebookBtn: 'המשך עם Facebook',
+    oauthErr: 'ההתחברות נכשלה. ודאו שהספק מוגדר ב־Supabase.',
     cloudLogout: 'התנתקות',
     cloudSyncBtn: '🔄 סנכרון עכשיו',
     cloudSynced: 'מחובר: {n} · מסונכרן ✓',
@@ -739,6 +774,10 @@ const STR = {
     cloudPass: 'Password (6+ characters)',
     cloudLogin: 'Sign in',
     cloudSignup: 'Sign up (first time)',
+    cloudOr: 'or',
+    googleBtn: 'Continue with Google',
+    facebookBtn: 'Continue with Facebook',
+    oauthErr: 'Sign-in failed. Make sure the provider is enabled in Supabase.',
     cloudLogout: 'Sign out',
     cloudSyncBtn: '🔄 Sync now',
     cloudSynced: 'Signed in: {n} · synced ✓',
@@ -1029,6 +1068,9 @@ function applyLang() {
   set('lcloud-pass', 'cloudPass');
   set('cloud-login-btn', 'cloudLogin');
   set('cloud-signup-btn', 'cloudSignup');
+  set('oauth-or', 'cloudOr');
+  document.getElementById('google-btn').innerHTML = '<span class="g">🔵</span>' + escapeHtml(t('googleBtn'));
+  document.getElementById('facebook-btn').innerHTML = '<span class="g">📘</span>' + escapeHtml(t('facebookBtn'));
   set('cloud-sync-btn', 'cloudSyncBtn');
   set('cloud-logout-btn', 'cloudLogout');
   set('backup-title', 'backupTitle');
@@ -1500,6 +1542,49 @@ function cloudLogout() {
   renderCloud();
 }
 
+// Start an OAuth login (Google/Facebook): redirect to Supabase, which sends the
+// browser to the provider and back to this app with tokens in the URL fragment.
+function doOAuth(provider) {
+  const redirectTo = location.origin + location.pathname;
+  location.href = CLOUD.url + '/auth/v1/authorize?provider=' + encodeURIComponent(provider) +
+    '&redirect_to=' + encodeURIComponent(redirectTo);
+}
+
+// On return from an OAuth provider the session arrives in location.hash.
+// Turn it into a stored session, then clean the URL.
+async function handleOAuthRedirect() {
+  const hash = location.hash || '';
+  if (hash.indexOf('access_token=') === -1) {
+    if (hash.indexOf('error=') !== -1) {
+      history.replaceState(null, '', location.pathname + location.search);
+      showToast(t('oauthErr'));
+    }
+    return false;
+  }
+  const p = new URLSearchParams(hash.slice(1));
+  const access_token = p.get('access_token');
+  const refresh_token = p.get('refresh_token');
+  history.replaceState(null, '', location.pathname + location.search);
+  if (!access_token || !refresh_token) return false;
+  try {
+    const res = await fetch(CLOUD.url + '/auth/v1/user', {
+      headers: { apikey: CLOUD.key, Authorization: 'Bearer ' + access_token },
+    });
+    if (!res.ok) throw new Error('user');
+    const user = await res.json();
+    setSession({
+      access_token, refresh_token,
+      expires_at: Number(p.get('expires_at')) || undefined,
+      expires_in: Number(p.get('expires_in')) || undefined,
+      user: { id: user.id, email: user.email },
+    });
+    return true;
+  } catch (e) {
+    showToast(t('oauthErr'));
+    return false;
+  }
+}
+
 function touch(tour) { tour.updatedAt = Date.now(); }
 function stampOf(tour) { return tour.updatedAt || tour.createdAt || 0; }
 
@@ -1967,7 +2052,18 @@ if (db.tournaments.length > 0 && !db.tournaments[0].finished) {
 }
 applyLang();
 render();
-if (session) syncNow(true);
+// Complete an OAuth redirect if we just came back from Google/Facebook,
+// otherwise resume any stored session.
+handleOAuthRedirect().then(loggedIn => {
+  if (loggedIn) { renderCloud(); syncNow(true); }
+  else if (session) syncNow(true);
+});
+// Safety net: if OAuth tokens arrive without a full reload, process them too.
+window.addEventListener('hashchange', () => {
+  if ((location.hash || '').indexOf('access_token=') !== -1) {
+    handleOAuthRedirect().then(ok => { if (ok) { renderCloud(); syncNow(true); } });
+  }
+});
 </script>
 </body>
 </html>
