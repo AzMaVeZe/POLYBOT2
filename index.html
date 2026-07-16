@@ -518,10 +518,11 @@
   }
   #install-row { margin-bottom: 16px; }
   #install-btn { margin-bottom: 8px; }
-  .claim-btn { width: auto; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; background: var(--card-2); color: var(--accent); border-radius: 999px; margin-inline-start: 6px; }
-  #me-picker { margin-bottom: 12px; }
-  #me-picker select { width: 100%; min-height: 44px; padding: 8px 12px; border-radius: 10px; border: 1px solid #334155; background: var(--card-2); color: var(--text); font-size: 1rem; }
   .me-star { color: var(--gold); margin-inline-start: 4px; }
+  .name-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+  .name-label-row label { margin-bottom: 0; }
+  .me-toggle { width: auto; padding: 4px 14px; font-size: 0.8rem; font-weight: 800; background: var(--card-2); color: var(--muted); border: 1px solid #334155; border-radius: 999px; min-height: 32px; }
+  .me-toggle.sel { background: linear-gradient(135deg, var(--gold), #fde68a); color: #422006; border-color: transparent; }
   .mystats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
   .mystats-grid .v { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
   .mystats-grid .k { font-size: 0.72rem; color: var(--muted); }
@@ -645,7 +646,6 @@
 
     <div class="card">
       <h2 id="ranking-title"></h2>
-      <div id="me-picker"></div>
       <table>
         <thead>
           <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff">+/-</th><th class="num" id="th-won"></th><th class="num" id="th-games"></th></tr>
@@ -769,11 +769,7 @@ const STR = {
     fmtMexicano: 'מקסיקנו',
     fmtHint: 'מקסיקנו: מסבב 2 הזוגות נקבעים לפי הדירוג (1+4 נגד 2+3) — משחקים צמודים יותר.',
     fmtLabelMex: 'מקסיקנו',
-    whoAreYou: '🙋 סמן מי אתה (בחירה אחת):',
-    pickMe: '— בחר/י שחקן —',
-    youAre: 'אתה',
-    changeMe: 'שינוי',
-    claimedMe: 'סומנת בטורניר הזה ⭐',
+    meToggle: 'אני',
     myStatsTitle: '🌟 הסטטיסטיקות שלי',
     myStatsTours: 'טורנירים', myStatsPts: 'נקודות', myStatsWon: 'ניצחונות', myStatsTitles: 'תארים',
     liveTitle: '📡 צפייה חיה',
@@ -905,11 +901,7 @@ const STR = {
     fmtMexicano: 'Mexicano',
     fmtHint: 'Mexicano: from round 2, pairs are set by ranking (1+4 vs 2+3) — closer games.',
     fmtLabelMex: 'Mexicano',
-    whoAreYou: '🙋 Mark who you are (pick one):',
-    pickMe: '— pick a player —',
-    youAre: 'You',
-    changeMe: 'Change',
-    claimedMe: 'Marked as you in this tournament ⭐',
+    meToggle: 'Me',
     myStatsTitle: '🌟 My stats',
     myStatsTours: 'tournaments', myStatsPts: 'points', myStatsWon: 'wins', myStatsTitles: 'titles',
     liveTitle: '📡 Live view',
@@ -1075,6 +1067,7 @@ function sanitizeTournament(x) {
   tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
   tour.updatedAt = Number.isInteger(x.updatedAt) ? x.updatedAt : null;
   tour.isPublic = !!x.isPublic;
+  tour.meIndex = (Number.isInteger(x.meIndex) && x.meIndex >= 0 && x.meIndex < n) ? x.meIndex : null;
   // Claims: { email: playerIndex } — validate emails/indices before trusting.
   tour.claims = {};
   if (x.claims && typeof x.claims === 'object') {
@@ -1151,6 +1144,7 @@ function newTournamentObj(players, targetPoints, format) {
     finished: false,
     finishedAt: null,
     format: format === 'mexicano' ? 'mexicano' : 'americano',
+    meIndex: null,
     players: players,
     target: targetPoints,
     points: new Array(n).fill(0),
@@ -1394,11 +1388,13 @@ function gotoHome() { view = 'home'; activeId = null; editingIndex = -1; render(
 
 let setupCount = 4;
 let setupFormat = 'americano';
+let setupMe = null;
 let pendingNames = null;
 
 function gotoSetup() {
   view = 'setup';
   setupFormat = db.lastFormat === 'mexicano' ? 'mexicano' : 'americano';
+  setupMe = null;
   const last = Array.isArray(db.lastPlayers) ? db.lastPlayers : [];
   setupCount = (last.length >= 4 && last.length <= 8) ? last.length : 4;
   pendingNames = last.slice();
@@ -1415,6 +1411,12 @@ function selectCount(n) {
 
 function selectFormat(f) {
   setupFormat = f;
+  haptic(8);
+  renderSetup();
+}
+
+function selectMe(i) {
+  setupMe = (setupMe === i) ? null : i; // tap again to unset
   haptic(8);
   renderSetup();
 }
@@ -1449,12 +1451,22 @@ function renderSetup() {
   pendingNames = null;
   fields.innerHTML = '';
   for (let i = 0; i < setupCount; i++) {
+    const row = document.createElement('div');
+    row.className = 'name-label-row';
     const lab = document.createElement('label');
     lab.htmlFor = 'p' + i;
     lab.textContent = t('player') + ' ' + (i + 1);
     const star = document.createElement('span');
     star.className = 'req'; star.textContent = '⁎'; star.setAttribute('aria-hidden', 'true');
     lab.appendChild(star);
+    const meBtn = document.createElement('button');
+    meBtn.type = 'button';
+    meBtn.className = 'me-toggle' + (setupMe === i ? ' sel' : '');
+    meBtn.textContent = (setupMe === i ? '⭐ ' : '') + t('meToggle');
+    meBtn.setAttribute('aria-pressed', setupMe === i ? 'true' : 'false');
+    meBtn.onclick = () => selectMe(i);
+    row.appendChild(lab);
+    row.appendChild(meBtn);
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.id = 'p' + i;
@@ -1464,7 +1476,7 @@ function renderSetup() {
     inp.setAttribute('aria-required', 'true');
     inp.placeholder = t('namePh');
     inp.value = prev[i] || '';
-    fields.appendChild(lab);
+    fields.appendChild(row);
     fields.appendChild(inp);
   }
 }
@@ -1489,6 +1501,10 @@ function startTournament() {
   if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) { err.textContent = t('errTarget'); return; }
   err.textContent = '';
   const tour = newTournamentObj(names, targetPoints, setupFormat);
+  if (setupMe !== null && setupMe < names.length) {
+    tour.meIndex = setupMe;                                  // local "this is me" (star)
+    if (session) tour.claims = { [session.user.email]: setupMe }; // account-linked personal stats
+  }
   db.tournaments.unshift(tour);
   db.lastPlayers = names.slice();
   db.lastTarget = targetPoints;
@@ -2124,46 +2140,6 @@ async function deleteAccountAsk() {
   }
 }
 
-/* ---------- "this is me" claims ---------- */
-
-function claimMe(i) {
-  const tour = current();
-  if (!tour || !session || !Number.isInteger(i) || i < 0 || i >= tour.players.length) return;
-  tour.claims = tour.claims || {};
-  tour.claims[session.user.email] = i;
-  touch(tour);
-  saveDb();
-  render();
-  showToast(t('claimedMe'));
-  haptic(10);
-}
-
-function clearMe() {
-  const tour = current();
-  if (!tour || !session || !tour.claims) return;
-  delete tour.claims[session.user.email];
-  touch(tour);
-  saveDb();
-  render();
-}
-
-// Single-select "who are you" picker for the ranking card (signed-in only).
-function renderMePicker(tour) {
-  const el = document.getElementById('me-picker');
-  if (!session) { el.innerHTML = ''; return; }
-  const mine = (tour.claims || {})[session.user.email];
-  if (mine !== undefined) {
-    el.innerHTML = '<div class="hint" style="text-align:start">' + escapeHtml(t('youAre')) + ': <b>' +
-      escapeHtml(tour.players[mine]) + '</b> ⭐ <button type="button" class="claim-btn" onclick="clearMe()">' +
-      escapeHtml(t('changeMe')) + '</button></div>';
-  } else {
-    let opts = '<option value="">' + escapeHtml(t('pickMe')) + '</option>';
-    tour.players.forEach((p, i) => { opts += '<option value="' + i + '">' + escapeHtml(p) + '</option>'; });
-    el.innerHTML = '<label class="hint" style="text-align:start" for="me-select">' + escapeHtml(t('whoAreYou')) +
-      '</label><select id="me-select" onchange="claimMe(parseInt(this.value,10))">' + opts + '</select>';
-  }
-}
-
 /* ---------- public results link ---------- */
 
 function publicUrl(tour) {
@@ -2264,7 +2240,8 @@ function renderLeaderboardInto(tbodyId, tour) {
   const order = rankOrder(tour);
   const tbody = document.getElementById(tbodyId);
   tbody.innerHTML = '';
-  const myClaim = session ? (tour.claims || {})[session.user.email] : undefined;
+  let myClaim = session ? (tour.claims || {})[session.user.email] : undefined;
+  if (myClaim === undefined && Number.isInteger(tour.meIndex)) myClaim = tour.meIndex;
   let prevKey = null, prevRank = 0;
   order.forEach((i, idx) => {
     const d = diffOf(tour, i);
@@ -2273,7 +2250,7 @@ function renderLeaderboardInto(tbodyId, tour) {
     prevKey = key; prevRank = rank;
     const cacheKey = tbodyId + ':' + tour.id + ':' + tour.players[i];
     const prevPts = ptsCache[cacheKey];
-    // The claimed "me" slot gets a star; picking is done via the single #me-picker select.
+    // The "me" slot (chosen at setup) gets a star.
     let nameCell = escapeHtml(tour.players[i]);
     if (myClaim === i) nameCell += '<span class="me-star" title="' + escapeHtml(t('claimedMe')) + '">⭐</span>';
     const tr = document.createElement('tr');
@@ -2370,7 +2347,6 @@ function renderGame(tour) {
   } else {
     restEl.classList.add('hidden');
   }
-  renderMePicker(tour);
   renderLeaderboardInto('leaderboard-body', tour);
   renderHistory(tour);
   // Live-share card: only for signed-in organizers.
