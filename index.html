@@ -518,6 +518,9 @@
   }
   #install-row { margin-bottom: 16px; }
   #install-btn { margin-bottom: 8px; }
+  .app-footer { text-align: center; padding: 8px 0 20px; }
+  .app-footer a { color: var(--muted); font-size: 0.8rem; text-decoration: underline; }
+  #fmt-hint { text-align: start; }
 </style>
 </head>
 <body>
@@ -533,7 +536,8 @@
   <div id="user-menu" class="hidden">
     <div class="menu-status" id="user-menu-status" aria-live="polite"></div>
     <button type="button" class="secondary" onclick="syncNow(true)" id="menu-sync" style="margin-top:0"></button>
-    <button type="button" class="secondary danger" onclick="cloudLogout()" id="menu-logout"></button>
+    <button type="button" class="secondary" onclick="cloudLogout()" id="menu-logout"></button>
+    <button type="button" class="secondary danger" onclick="deleteAccountAsk()" id="menu-delete"></button>
   </div>
   <h1 id="app-title">🎾 פאדלז׳יט</h1>
   <div class="subtitle" id="subtitle"></div>
@@ -569,17 +573,6 @@
         -->
       </div>
     </div>
-    <div class="card">
-      <h2 id="backup-title"></h2>
-      <button type="button" class="secondary" onclick="exportBackup()" id="export-btn" style="margin-top:0"></button>
-      <textarea id="backup-box" class="hidden" readonly></textarea>
-      <button type="button" class="secondary" onclick="toggleImport()" id="import-btn"></button>
-      <div id="import-area" class="hidden">
-        <textarea id="import-box"></textarea>
-        <button type="button" onclick="importBackup()" id="import-go"></button>
-      </div>
-      <div class="error-msg" id="backup-error" role="alert"></div>
-    </div>
     <div class="card" id="alltime-card">
       <h2 id="alltime-title"></h2>
       <table>
@@ -588,6 +581,9 @@
         </thead>
         <tbody id="alltime-body"></tbody>
       </table>
+    </div>
+    <div class="app-footer">
+      <a id="privacy-link" href="privacy.html" target="_blank" rel="noopener"></a>
     </div>
   </div>
 
@@ -599,6 +595,9 @@
         <label id="lcount"></label>
         <div class="count-row" id="count-row"></div>
         <div id="name-fields"></div>
+        <label id="lformat"></label>
+        <div class="count-row" id="format-row"></div>
+        <div class="hint" id="fmt-hint" class="hidden"></div>
         <label for="target" id="ltarget"></label>
         <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric" enterkeyhint="go" aria-required="true" aria-describedby="setup-error">
         <div class="error-msg" id="setup-error" role="alert"></div>
@@ -688,6 +687,14 @@
       <button class="secondary" onclick="copyResults()" id="copy-btn"></button>
       <textarea id="share-fallback" class="hidden" readonly></textarea>
     </div>
+    <div class="card" id="share-link-card">
+      <h2 id="share-link-title"></h2>
+      <button type="button" onclick="publishTournament()" id="make-public-btn"></button>
+      <div id="public-live" class="hidden">
+        <div class="hint" id="public-on" style="text-align:start"></div>
+        <button type="button" class="secondary" onclick="copyPublicLink()" id="copy-link-btn" style="margin-top:0"></button>
+      </div>
+    </div>
     <button onclick="rematch()" id="rematch-btn"></button>
     <button class="secondary" onclick="resumeTournament()" id="resume-btn"></button>
     <button class="secondary" onclick="gotoHome()" id="podium-home-btn"></button>
@@ -731,6 +738,22 @@ const STR = {
     installHintGeneric: 'להתקנה כאפליקציה: פתחו את התפריט של הדפדפן (⋮) ובחרו "התקן אפליקציה" / "הוסף למסך הבית". אם פתחתם מוואטסאפ — פתחו קודם בכרום (⋮ ← "פתח בכרום").',
     reqLegend: '⁎ שדה חובה',
     syncedA11y: 'מסונכרן', syncingA11y: 'מסנכרן', syncErrA11y: 'שגיאת סנכרון',
+    deleteAccount: '🗑️ מחיקת חשבון',
+    deleteAccountConfirm: '⚠️ בטוח? לחצו שוב למחיקה',
+    accountDeleted: 'החשבון והנתונים נמחקו',
+    deleteAccountErr: 'מחיקת החשבון נכשלה. נסו שוב.',
+    privacyLink: 'מדיניות פרטיות',
+    formatLabel: 'סוג הטורניר',
+    fmtAmericano: 'אמריקנו',
+    fmtMexicano: 'מקסיקנו',
+    fmtHint: 'מקסיקנו: מסבב 2 הזוגות נקבעים לפי הדירוג (1+4 נגד 2+3) — משחקים צמודים יותר.',
+    fmtLabelMex: 'מקסיקנו',
+    shareLinkTitle: '🔗 קישור ציבורי לתוצאות',
+    makePublic: 'יצירת קישור ציבורי לשיתוף',
+    publicOn: '✓ הקישור פעיל — כל מי שיפתח אותו יראה את התוצאות',
+    copyLink: 'העתקת הקישור',
+    linkCopied: 'הקישור הועתק ✓',
+    publicErr: 'יצירת הקישור נכשלה. נסו שוב.',
     installedToast: 'PadelZit הותקנה ✓',
     updateReady: '🔄 גרסה חדשה של PadelZit זמינה',
     updateBtn: 'רענון',
@@ -839,6 +862,22 @@ const STR = {
     installHintGeneric: 'To install as an app: open the browser menu (⋮) and choose "Install app" / "Add to Home screen". If you opened this from WhatsApp, open it in Chrome first (⋮ → "Open in Chrome").',
     reqLegend: '⁎ required',
     syncedA11y: 'synced', syncingA11y: 'syncing', syncErrA11y: 'sync error',
+    deleteAccount: '🗑️ Delete account',
+    deleteAccountConfirm: '⚠️ Sure? Tap again to delete',
+    accountDeleted: 'Account and data deleted',
+    deleteAccountErr: 'Account deletion failed. Try again.',
+    privacyLink: 'Privacy policy',
+    formatLabel: 'Tournament format',
+    fmtAmericano: 'Americano',
+    fmtMexicano: 'Mexicano',
+    fmtHint: 'Mexicano: from round 2, pairs are set by ranking (1+4 vs 2+3) — closer games.',
+    fmtLabelMex: 'Mexicano',
+    shareLinkTitle: '🔗 Public results link',
+    makePublic: 'Create a public share link',
+    publicOn: '✓ Link is live — anyone who opens it sees the results',
+    copyLink: 'Copy link',
+    linkCopied: 'Link copied ✓',
+    publicErr: 'Creating the link failed. Try again.',
     installedToast: 'PadelZit installed ✓',
     updateReady: '🔄 A new version of PadelZit is available',
     updateBtn: 'Refresh',
@@ -981,7 +1020,7 @@ function sanitizeTournament(x) {
   const target = (Number.isInteger(x.target) && x.target >= 2 && x.target <= 500) ? x.target : 32;
   // Cap imported name length (defensive against oversized/hostile data).
   const players = x.players.map(p => String(p).slice(0, 40));
-  const tour = newTournamentObj(players, target);
+  const tour = newTournamentObj(players, target, x.format === 'mexicano' ? 'mexicano' : 'americano');
   // Only accept a safe id charset; otherwise keep the freshly generated one.
   // This closes an XSS sink where an imported/synced id is concatenated into
   // inline onclick handlers on the home screen.
@@ -990,6 +1029,7 @@ function sanitizeTournament(x) {
   tour.finished = !!x.finished;
   tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
   tour.updatedAt = Number.isInteger(x.updatedAt) ? x.updatedAt : null;
+  tour.isPublic = !!x.isPublic;
   const validTeams = g => {
     const all = [...g.teamA, ...g.teamB];
     return all.every(i => Number.isInteger(i) && i >= 0 && i < n) && new Set(all).size === 4;
@@ -1028,6 +1068,7 @@ function loadDb() {
         db.tournaments = parsed.tournaments.map(sanitizeTournament).filter(Boolean);
         if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length >= 4 && parsed.lastPlayers.length <= 8) db.lastPlayers = parsed.lastPlayers;
         if (Number.isInteger(parsed.lastTarget)) db.lastTarget = parsed.lastTarget;
+        if (parsed.lastFormat === 'mexicano' || parsed.lastFormat === 'americano') db.lastFormat = parsed.lastFormat;
         if (Array.isArray(parsed.deletedIds)) db.deletedIds = parsed.deletedIds.filter(x => typeof x === 'string');
       }
     }
@@ -1048,7 +1089,7 @@ function loadDb() {
   } catch (e) { /* ignore broken legacy state */ }
 }
 
-function newTournamentObj(players, targetPoints) {
+function newTournamentObj(players, targetPoints, format) {
   const n = players.length;
   const tour = {
     id: 'T' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
@@ -1056,6 +1097,7 @@ function newTournamentObj(players, targetPoints) {
     updatedAt: Date.now(),
     finished: false,
     finishedAt: null,
+    format: format === 'mexicano' ? 'mexicano' : 'americano',
     players: players,
     target: targetPoints,
     points: new Array(n).fill(0),
@@ -1095,8 +1137,23 @@ function partnerCount(tour, x, y) {
 // Pick the next pairing. With 4 players: the classic 3-pairing cycle.
 // With 5-8 players: the 4 with fewest games play (random among ties),
 // paired to minimize repeat partnerships; the rest sit out this game.
+// Mexicano (from round 2): the 4 who play are paired by standing — 1+4 vs 2+3.
 function computeNext(tour) {
   const n = tour.players.length;
+  if (tour.format === 'mexicano' && tour.history.length > 0) {
+    const order = rankOrder(tour); // best → worst
+    let four;
+    if (n === 4) {
+      four = order.slice();
+    } else {
+      // Fewest-games-first for fair rest; tie-broken by rank.
+      const rankPos = {}; order.forEach((p, i) => rankPos[p] = i);
+      const byGames = [...Array(n).keys()].sort((a, b) =>
+        tour.gamesPlayed[a] - tour.gamesPlayed[b] || rankPos[a] - rankPos[b]);
+      four = byGames.slice(0, 4).sort((a, b) => rankPos[a] - rankPos[b]);
+    }
+    return [[four[0], four[3]], [four[1], four[2]]]; // 1+4 vs 2+3
+  }
   if (n === 4) {
     const p = PAIRINGS[tour.pairingOrder[tour.pairingCursor]];
     return [p[0].slice(), p[1].slice()];
@@ -1191,11 +1248,14 @@ function applyLang() {
   document.getElementById('facebook-btn').innerHTML = '<span class="g">📘</span>' + escapeHtml(t('facebookBtn'));
   set('menu-sync', 'cloudSyncBtn');
   set('menu-logout', 'cloudLogout');
-  set('backup-title', 'backupTitle');
-  set('export-btn', 'exportBtn');
-  set('import-btn', 'importBtn');
-  set('import-go', 'importGo');
-  document.getElementById('import-box').placeholder = t('importPh');
+  set('menu-delete', 'deleteAccount');
+  set('privacy-link', 'privacyLink');
+  set('lformat', 'formatLabel');
+  set('fmt-hint', 'fmtHint');
+  set('share-link-title', 'shareLinkTitle');
+  set('make-public-btn', 'makePublic');
+  set('public-on', 'publicOn');
+  set('copy-link-btn', 'copyLink');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
 }
 
@@ -1274,10 +1334,12 @@ function confettiBurst() {
 function gotoHome() { view = 'home'; activeId = null; editingIndex = -1; render(); }
 
 let setupCount = 4;
+let setupFormat = 'americano';
 let pendingNames = null;
 
 function gotoSetup() {
   view = 'setup';
+  setupFormat = db.lastFormat === 'mexicano' ? 'mexicano' : 'americano';
   const last = Array.isArray(db.lastPlayers) ? db.lastPlayers : [];
   setupCount = (last.length >= 4 && last.length <= 8) ? last.length : 4;
   pendingNames = last.slice();
@@ -1288,6 +1350,13 @@ function gotoSetup() {
 
 function selectCount(n) {
   setupCount = n;
+  haptic(8);
+  renderSetup();
+}
+
+function selectFormat(f) {
+  setupFormat = f;
+  haptic(8);
   renderSetup();
 }
 
@@ -1303,6 +1372,17 @@ function renderSetup() {
     b.onclick = () => selectCount(n);
     row.appendChild(b);
   }
+  const fmtRow = document.getElementById('format-row');
+  fmtRow.innerHTML = '';
+  [['americano', t('fmtAmericano')], ['mexicano', t('fmtMexicano')]].forEach(([f, label]) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'count-chip' + (f === setupFormat ? ' sel' : '');
+    b.textContent = label;
+    b.onclick = () => selectFormat(f);
+    fmtRow.appendChild(b);
+  });
+  document.getElementById('fmt-hint').classList.toggle('hidden', setupFormat !== 'mexicano');
   const fields = document.getElementById('name-fields');
   const prev = pendingNames !== null
     ? pendingNames
@@ -1349,10 +1429,11 @@ function startTournament() {
   const targetPoints = parseScore(document.getElementById('target').value);
   if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) { err.textContent = t('errTarget'); return; }
   err.textContent = '';
-  const tour = newTournamentObj(names, targetPoints);
+  const tour = newTournamentObj(names, targetPoints, setupFormat);
   db.tournaments.unshift(tour);
   db.lastPlayers = names.slice();
   db.lastTarget = targetPoints;
+  db.lastFormat = setupFormat;
   saveDb();
   activeId = tour.id;
   view = 'game';
@@ -1617,6 +1698,7 @@ function shareText(tour) {
   });
   lines.push('');
   lines.push(dirMark + t('shareGames', tour.history.length) + ' · ' + t('shareTarget', tour.target));
+  if (tour.isPublic) { lines.push(''); lines.push(publicUrl(tour)); }
   return lines.join('\n');
 }
 
@@ -1948,54 +2030,79 @@ function renderCloud() {
 }
 let lastSyncStatus = null;
 
-/* ---------- backup / restore ---------- */
+/* ---------- account deletion ---------- */
 
-function exportBackup() {
-  const text = JSON.stringify(db);
-  const box = document.getElementById('backup-box');
-  const showBox = () => {
-    box.value = text;
-    box.classList.remove('hidden');
-    box.focus(); box.select();
-    showToast(t('copyManual'));
-  };
-  if (navigator.clipboard && navigator.clipboard.writeText) {
-    navigator.clipboard.writeText(text).then(() => {
-      box.classList.add('hidden');
-      showToast(t('copied'));
-    }).catch(showBox);
-  } else {
-    showBox();
+let pendingDeleteAccount = false;
+
+async function deleteAccountAsk() {
+  if (!session) return;
+  if (!pendingDeleteAccount) {
+    pendingDeleteAccount = true;
+    const btn = document.getElementById('menu-delete');
+    btn.textContent = t('deleteAccountConfirm');
+    setTimeout(() => { pendingDeleteAccount = false; const b = document.getElementById('menu-delete'); if (b) b.textContent = t('deleteAccount'); }, 4000);
+    return;
+  }
+  pendingDeleteAccount = false;
+  const btn = document.getElementById('menu-delete');
+  btn.disabled = true;
+  try {
+    const res = await sbFetch('/rest/v1/rpc/delete_account', { method: 'POST', body: '{}' });
+    if (!res.ok) throw new Error('rpc ' + res.status);
+    // Wipe everything locally and sign out.
+    db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [] };
+    store.setItem(DB_KEY, JSON.stringify(db));
+    clearSession();
+    activeId = null;
+    view = 'home';
+    toggleUserMenu(false);
+    render();
+    showToast(t('accountDeleted'));
+  } catch (e) {
+    btn.disabled = false;
+    btn.textContent = t('deleteAccount');
+    showToast(t('deleteAccountErr'));
   }
 }
 
-function toggleImport() {
-  document.getElementById('import-area').classList.toggle('hidden');
-  document.getElementById('backup-error').textContent = '';
+/* ---------- public results link ---------- */
+
+function publicUrl(tour) {
+  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
+  return base + 'r.html?t=' + encodeURIComponent(tour.id);
 }
 
-function importBackup() {
-  const err = document.getElementById('backup-error');
-  err.textContent = '';
+async function publishTournament() {
+  const tour = current();
+  if (!tour || !session) return;
+  const btn = document.getElementById('make-public-btn');
+  btn.disabled = true;
   try {
-    const parsed = JSON.parse(document.getElementById('import-box').value);
-    const arr = Array.isArray(parsed) ? parsed
-      : (parsed && Array.isArray(parsed.tournaments)) ? parsed.tournaments : null;
-    if (!arr) throw new Error('bad');
-    const clean = arr.map(sanitizeTournament).filter(Boolean);
-    if (clean.length === 0) throw new Error('bad');
-    clean.forEach(tour => {
-      const at = db.tournaments.findIndex(x => x.id === tour.id);
-      if (at >= 0) db.tournaments[at] = tour; else db.tournaments.push(tour);
+    await cloudPush();                       // make sure the row exists in the cloud
+    const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ is_public: true }),
     });
-    db.tournaments.sort((a, b) => b.createdAt - a.createdAt);
+    if (!res.ok) throw new Error('patch ' + res.status);
+    tour.isPublic = true;
     saveDb();
-    document.getElementById('import-box').value = '';
-    document.getElementById('import-area').classList.add('hidden');
-    render();
-    showToast(t('imported', clean.length));
+    renderPodium(tour);
+    copyPublicLink();
   } catch (e) {
-    err.textContent = t('importErr');
+    showToast(t('publicErr'));
+  }
+  btn.disabled = false;
+}
+
+function copyPublicLink() {
+  const tour = current(); if (!tour) return;
+  const url = publicUrl(tour);
+  const done = () => showToast(t('linkCopied'));
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => prompt(t('copyLink'), url));
+  } else {
+    prompt(t('copyLink'), url);
   }
 }
 
@@ -2111,7 +2218,9 @@ function renderGame(tour) {
   const n = tour.history.length;
   const nPlayers = tour.players.length;
   let label = t('game') + ' ' + (n + 1);
-  if (nPlayers === 4) {
+  if (tour.format === 'mexicano') {
+    label += ' · ' + t('fmtLabelMex');
+  } else if (nPlayers === 4) {
     const round = Math.floor(n / 3) + 1;
     const inRound = (n % 3) + 1;
     label += ' · ' + t('round') + ' ' + round + ' (' + inRound + '/3)';
@@ -2154,6 +2263,18 @@ function renderPodium(tour) {
   const wa = document.getElementById('wa-link');
   wa.href = 'https://wa.me/?text=' + encodeURIComponent(shareText(tour));
   document.getElementById('share-fallback').classList.add('hidden');
+  // Public-link card: only offer it to signed-in users (needs the cloud).
+  const linkCard = document.getElementById('share-link-card');
+  const makeBtn = document.getElementById('make-public-btn');
+  const live = document.getElementById('public-live');
+  if (!session) {
+    linkCard.classList.add('hidden');
+  } else {
+    linkCard.classList.remove('hidden');
+    makeBtn.disabled = false;
+    if (tour.isPublic) { makeBtn.classList.add('hidden'); live.classList.remove('hidden'); }
+    else { makeBtn.classList.remove('hidden'); live.classList.add('hidden'); }
+  }
   // Replay the medal entrance on each podium view.
   if (!REDUCE) {
     ['.podium-first .medal', '.podium-rest .p:nth-child(1) .medal', '.podium-rest .p:nth-child(2) .medal']

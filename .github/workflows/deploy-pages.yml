@@ -22,10 +22,12 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
-      - name: Stage site (app page + PWA assets, no keystore or sources)
+      - name: Stage site (app + public pages + PWA assets, no keystore or sources)
         run: |
           mkdir _site
           cp index.html _site/index.html
+          cp r.html _site/r.html
+          cp privacy.html _site/privacy.html
           cp -r pwa/. _site/
       - uses: actions/configure-pages@v5
         with:

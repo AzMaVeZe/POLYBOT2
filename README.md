@@ -13,7 +13,10 @@ A score-keeping app for padel Americano tournaments with 4–8 players. Hebrew (
 - **Finish & podium** — crown the winner with a 🥇🥈🥉 podium and final table.
 - **Share on WhatsApp** — send the standings to friends with one tap (or copy as text).
 - **All-time leaderboard** — aggregated points, wins and 🏆 titles across all tournaments, saved on the device.
-- **Backup & transfer** — copy a backup code on one device, paste it on another; tournaments merge safely.
+- **Cloud accounts** — email / Google / Facebook sign-in (Supabase, PKCE); tournaments sync across devices, with self-serve account+data deletion.
+- **Mexicano mode** — optional format where, from round 2, pairs are set by standing (1+4 vs 2+3) for closer games.
+- **Public results link** — publish a finished tournament to a read-only page (`r.html`) and share it; opens with an install call-to-action.
+- **Privacy policy** at `privacy.html`.
 - Robust storage: corrupted/legacy saves are sanitized, multiple open tabs stay in sync, and the app still works where localStorage is blocked (memory fallback).
 
 ## Running it
@@ -52,8 +55,6 @@ before any store upload.
 
 ## Roadmap
 
-- Mexicano mode (pairs by standings)
-- Accounts (email / Google / Facebook) with cross-device sync
-- Shared online tournaments: register via a link, live leaderboard for the whole group
+- Live shared tournament view (realtime leaderboard for all participants)
 
 These require a small backend (e.g. Firebase/Supabase); the current app is intentionally 100% client-side and signup-free.
