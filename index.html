@@ -38,7 +38,53 @@
     padding: 16px;
   }
   .container { max-width: 560px; margin: 0 auto; }
-  .topbar { display: flex; justify-content: flex-end; }
+  .topbar { display: flex; align-items: center; gap: 8px; }
+  .lang-btn { margin-inline-start: auto; }
+  #user-chip {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: var(--card);
+    border: 1px solid #334155;
+    border-radius: 999px;
+    padding: 5px 12px 5px 5px;
+    cursor: pointer;
+    max-width: 62%;
+  }
+  #user-chip .avatar {
+    width: 28px; height: 28px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--accent), var(--accent-2));
+    color: #06283d;
+    font-weight: 800;
+    font-size: 0.85rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex: 0 0 auto;
+  }
+  #user-chip .user-email {
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: var(--text);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  #user-chip .sync-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
+  .sync-dot.ok { background: var(--green); }
+  .sync-dot.syncing { background: var(--gold); }
+  .sync-dot.error { background: var(--red); }
+  #user-menu {
+    background: var(--card);
+    border: 1px solid #334155;
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 16px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.35);
+  }
+  #user-menu .menu-status { color: var(--muted); font-size: 0.85rem; margin-bottom: 10px; }
+  #user-menu button { margin-top: 8px; }
   .lang-btn {
     width: auto;
     padding: 10px 16px;
@@ -360,6 +406,7 @@
     margin-bottom: 8px;
   }
   .oauth-btn.facebook { background: #1877f2; color: #fff; }
+  .oauth-btn.apple { background: #000; color: #fff; }
   .oauth-btn .g { display: inline-flex; }
 
   #backup-box, #import-box {
@@ -428,7 +475,17 @@
 <body>
 <div class="container">
   <div class="topbar">
+    <div id="user-chip" class="hidden" onclick="toggleUserMenu()" role="button" tabindex="0">
+      <span class="avatar" id="user-avatar">👤</span>
+      <span class="user-email" id="user-email"></span>
+      <span class="sync-dot ok" id="sync-dot" title=""></span>
+    </div>
     <button type="button" class="lang-btn" id="lang-btn" onclick="toggleLang()">English</button>
+  </div>
+  <div id="user-menu" class="hidden">
+    <div class="menu-status" id="user-menu-status" aria-live="polite"></div>
+    <button type="button" class="secondary" onclick="syncNow(true)" id="menu-sync" style="margin-top:0"></button>
+    <button type="button" class="secondary danger" onclick="cloudLogout()" id="menu-logout"></button>
   </div>
   <h1 id="app-title">🎾 פאדלז׳יט</h1>
   <div class="subtitle" id="subtitle"></div>
@@ -459,11 +516,7 @@
         <div class="oauth-sep" id="oauth-sep"><span id="oauth-or"></span></div>
         <button type="button" class="oauth-btn google" onclick="doOAuth('google')" id="google-btn"></button>
         <button type="button" class="oauth-btn facebook" onclick="doOAuth('facebook')" id="facebook-btn"></button>
-      </div>
-      <div id="cloud-logged-in" class="hidden">
-        <div class="hint" id="cloud-status" style="text-align:start" aria-live="polite"></div>
-        <button type="button" class="secondary" onclick="syncNow(true)" id="cloud-sync-btn" style="margin-top:0"></button>
-        <button type="button" class="secondary" onclick="cloudLogout()" id="cloud-logout-btn"></button>
+        <button type="button" class="oauth-btn apple" onclick="doOAuth('apple')" id="apple-btn"></button>
       </div>
     </div>
     <div class="card">
@@ -672,6 +725,7 @@ const STR = {
     cloudOr: 'או',
     googleBtn: 'המשך עם Google',
     facebookBtn: 'המשך עם Facebook',
+    appleBtn: 'המשך עם Apple',
     oauthErr: 'ההתחברות נכשלה. ודאו שהספק מוגדר ב־Supabase.',
     cloudLogout: 'התנתקות',
     cloudSyncBtn: '🔄 סנכרון עכשיו',
@@ -777,6 +831,7 @@ const STR = {
     cloudOr: 'or',
     googleBtn: 'Continue with Google',
     facebookBtn: 'Continue with Facebook',
+    appleBtn: 'Continue with Apple',
     oauthErr: 'Sign-in failed. Make sure the provider is enabled in Supabase.',
     cloudLogout: 'Sign out',
     cloudSyncBtn: '🔄 Sync now',
@@ -1071,8 +1126,9 @@ function applyLang() {
   set('oauth-or', 'cloudOr');
   document.getElementById('google-btn').innerHTML = '<span class="g">🔵</span>' + escapeHtml(t('googleBtn'));
   document.getElementById('facebook-btn').innerHTML = '<span class="g">📘</span>' + escapeHtml(t('facebookBtn'));
-  set('cloud-sync-btn', 'cloudSyncBtn');
-  set('cloud-logout-btn', 'cloudLogout');
+  document.getElementById('apple-btn').innerHTML = '<span class="g"></span>' + escapeHtml(t('appleBtn'));
+  set('menu-sync', 'cloudSyncBtn');
+  set('menu-logout', 'cloudLogout');
   set('backup-title', 'backupTitle');
   set('export-btn', 'exportBtn');
   set('import-btn', 'importBtn');
@@ -1458,11 +1514,17 @@ function loadSession() {
 }
 
 function setSession(s) {
+  const u = s.user || {};
+  const meta = u.user_metadata || {};
   session = {
     access_token: s.access_token,
     refresh_token: s.refresh_token,
     expires_at: s.expires_at || Math.floor(Date.now() / 1000) + (s.expires_in || 3600),
-    user: { id: s.user.id, email: s.user.email },
+    user: {
+      id: u.id,
+      email: u.email,
+      name: u.name || meta.full_name || meta.name || null,
+    },
   };
   store.setItem(SESSION_KEY, JSON.stringify(session));
 }
@@ -1576,7 +1638,7 @@ async function handleOAuthRedirect() {
       access_token, refresh_token,
       expires_at: Number(p.get('expires_at')) || undefined,
       expires_in: Number(p.get('expires_in')) || undefined,
-      user: { id: user.id, email: user.email },
+      user: user,
     });
     return true;
   } catch (e) {
@@ -1652,18 +1714,31 @@ function scheduleCloudPush() {
   pushTimer = setTimeout(() => { syncNow(false); }, 1500);
 }
 
+function toggleUserMenu() {
+  document.getElementById('user-menu').classList.toggle('hidden');
+}
+
 function renderCloud() {
-  const out = document.getElementById('cloud-logged-out');
-  const inn = document.getElementById('cloud-logged-in');
+  const card = document.getElementById('cloud-card');
+  const chip = document.getElementById('user-chip');
+  const menu = document.getElementById('user-menu');
   if (!session) {
-    out.classList.remove('hidden');
-    inn.classList.add('hidden');
+    // Signed out: show the full cloud card so people can log in; hide the chip.
+    if (card) card.classList.remove('hidden');
+    chip.classList.add('hidden');
+    menu.classList.add('hidden');
     return;
   }
-  out.classList.add('hidden');
-  inn.classList.remove('hidden');
+  // Signed in: replace the whole card with a compact user chip in the top bar.
+  if (card) card.classList.add('hidden');
+  chip.classList.remove('hidden');
+  const label = (session.user.name || session.user.email || '').trim();
+  document.getElementById('user-avatar').textContent = label ? label[0].toUpperCase() : '👤';
+  document.getElementById('user-email').textContent = label;
   const key = syncStatus === 'syncing' ? 'cloudSyncing' : syncStatus === 'error' ? 'cloudSyncErr' : 'cloudSynced';
-  document.getElementById('cloud-status').textContent = t(key, session.user.email);
+  document.getElementById('sync-dot').className = 'sync-dot ' +
+    (syncStatus === 'syncing' ? 'syncing' : syncStatus === 'error' ? 'error' : 'ok');
+  document.getElementById('user-menu-status').textContent = t(key, label);
 }
 
 /* ---------- backup / restore ---------- */
@@ -1938,6 +2013,7 @@ function render() {
   const tour = current();
   if ((view === 'game' || view === 'podium') && !tour) view = 'home';
   document.getElementById(screens[view]).classList.remove('hidden');
+  renderCloud(); // keep the user chip / cloud card correct on every screen
   if (view === 'home') renderHome();
   else if (view === 'setup') renderSetup();
   else if (view === 'game') renderGame(tour);
