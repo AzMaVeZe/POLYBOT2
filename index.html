@@ -75,6 +75,53 @@
   .sync-dot.ok { background: var(--green); }
   .sync-dot.syncing { background: var(--gold); }
   .sync-dot.error { background: var(--red); }
+  .sync-dot { transition: background-color .3s ease; }
+  .sync-dot.syncing { animation: breathe 1s ease-in-out infinite; }
+  @keyframes breathe { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(1.4); } }
+  #user-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+  /* Screen entrance */
+  .screen-in { animation: screenIn .18s ease-out; }
+  @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  /* Confetti canvas */
+  #confetti { position: fixed; inset: 0; pointer-events: none; z-index: 45; }
+
+  /* Winning / losing team highlight on save */
+  .team.won { animation: teamWon .7s ease; outline: 2px solid var(--green); outline-offset: -2px; }
+  @keyframes teamWon { 0% { transform: scale(1); } 30% { transform: scale(1.04); } 100% { transform: scale(1); } }
+  .team.lost { opacity: .55; transition: opacity .5s; }
+
+  /* Podium medal entrance */
+  .podium-first .medal { animation: medalIn .5s .05s both cubic-bezier(.2,1.3,.4,1); }
+  .podium-rest .p:nth-child(1) .medal { animation: medalIn .5s .20s both cubic-bezier(.2,1.3,.4,1); }
+  .podium-rest .p:nth-child(2) .medal { animation: medalIn .5s .34s both cubic-bezier(.2,1.3,.4,1); }
+  @keyframes medalIn { from { transform: scale(0) rotate(-25deg); opacity: 0; } to { transform: none; opacity: 1; } }
+
+  /* Gold shimmer on rank #1 */
+  .rank-1 { background: linear-gradient(110deg,#fbbf24,#fde68a,#fbbf24); background-size: 200% 100%; animation: shine 2.6s linear infinite; }
+  @keyframes shine { to { background-position: -200% 0; } }
+
+  /* Empty-state ball */
+  .empty-ball { font-size: 2.4rem; opacity: .35; text-align: center; margin-bottom: 6px; animation: float 3s ease-in-out infinite; }
+  @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
+
+  /* Required-field marker */
+  .req { color: var(--red); margin-inline-start: 3px; font-weight: 800; }
+  input[aria-invalid="true"] { border-color: var(--red); outline-color: var(--red); }
+
+  /* Save-button success pulse */
+  .save-ok { animation: saveOk .5s ease; }
+  @keyframes saveOk { 0% { box-shadow: 0 0 0 0 rgba(52,211,153,.6); } 100% { box-shadow: 0 0 0 14px rgba(52,211,153,0); } }
+
+  .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+
+  @media (prefers-reduced-motion: reduce) {
+    .sync-dot.syncing, .screen-in, .team.won, .podium-first .medal, .podium-rest .medal,
+    .rank-1, .empty-ball, .save-ok { animation: none !important; }
+    .team.lost { opacity: 1; }
+    .rank-1 { background: var(--gold); }
+  }
   #user-menu {
     background: var(--card);
     border: 1px solid #334155;
@@ -256,7 +303,8 @@
   }
   .rank-1 { background: var(--gold); color: #422006; }
   .rank-2 { background: var(--silver); color: #1e293b; }
-  .rank-3 { background: var(--bronze); color: #fff7ed; }
+  .rank-3 { background: var(--bronze); color: #3a1d02; }
+  input::placeholder { color: #7c8aa0; opacity: 1; }
   .pts { font-weight: 800; color: var(--accent); }
   .diff.pos { color: var(--green); }
   .diff.neg { color: var(--red); }
@@ -475,10 +523,10 @@
 <body>
 <div class="container">
   <div class="topbar">
-    <div id="user-chip" class="hidden" onclick="toggleUserMenu()" role="button" tabindex="0">
-      <span class="avatar" id="user-avatar">👤</span>
+    <div id="user-chip" class="hidden" onclick="toggleUserMenu()" onkeydown="chipKey(event)" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu">
+      <span class="avatar" id="user-avatar" aria-hidden="true">👤</span>
       <span class="user-email" id="user-email"></span>
-      <span class="sync-dot ok" id="sync-dot" title=""></span>
+      <span class="sync-dot ok" id="sync-dot" role="img" aria-label=""></span>
     </div>
     <button type="button" class="lang-btn" id="lang-btn" onclick="toggleLang()">English</button>
   </div>
@@ -507,9 +555,9 @@
       <div id="cloud-logged-out">
         <div class="hint" id="cloud-hint" style="text-align:start"></div>
         <label for="cloud-email" id="lcloud-email"></label>
-        <input type="email" id="cloud-email" autocomplete="email" inputmode="email">
+        <input type="email" id="cloud-email" autocomplete="email" inputmode="email" aria-required="true" aria-describedby="cloud-error">
         <label for="cloud-pass" id="lcloud-pass"></label>
-        <input type="password" id="cloud-pass" autocomplete="current-password">
+        <input type="password" id="cloud-pass" autocomplete="current-password" aria-required="true" aria-describedby="cloud-error">
         <div class="error-msg" id="cloud-error" role="alert"></div>
         <button type="button" onclick="cloudLogin()" id="cloud-login-btn"></button>
         <button type="button" class="secondary" onclick="cloudSignup()" id="cloud-signup-btn"></button>
@@ -552,8 +600,9 @@
         <div class="count-row" id="count-row"></div>
         <div id="name-fields"></div>
         <label for="target" id="ltarget"></label>
-        <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric" enterkeyhint="go">
+        <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric" enterkeyhint="go" aria-required="true" aria-describedby="setup-error">
         <div class="error-msg" id="setup-error" role="alert"></div>
+        <div class="hint" id="req-legend" style="text-align:start"></div>
         <button type="submit" id="start-btn"></button>
       </form>
       <button type="button" class="secondary" onclick="gotoHome()" id="setup-back-btn"></button>
@@ -648,6 +697,8 @@
   <span id="update-text"></span>
   <button type="button" id="update-btn" onclick="applyUpdate()"></button>
 </div>
+<canvas id="confetti" aria-hidden="true"></canvas>
+<div id="sr-status" class="sr-only" role="status" aria-live="polite"></div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -678,6 +729,8 @@ const STR = {
     installBtn: '📲 התקן את PadelZit במסך הבית',
     installHintIos: 'להתקנה באייפון: הקישו על כפתור השיתוף בסאפארי ⬆️ ואז "הוסף למסך הבית".',
     installHintGeneric: 'להתקנה כאפליקציה: פתחו את התפריט של הדפדפן (⋮) ובחרו "התקן אפליקציה" / "הוסף למסך הבית". אם פתחתם מוואטסאפ — פתחו קודם בכרום (⋮ ← "פתח בכרום").',
+    reqLegend: '⁎ שדה חובה',
+    syncedA11y: 'מסונכרן', syncingA11y: 'מסנכרן', syncErrA11y: 'שגיאת סנכרון',
     installedToast: 'PadelZit הותקנה ✓',
     updateReady: '🔄 גרסה חדשה של PadelZit זמינה',
     updateBtn: 'רענון',
@@ -784,6 +837,8 @@ const STR = {
     installBtn: '📲 Install PadelZit on your home screen',
     installHintIos: 'To install on iPhone: tap the Share button in Safari ⬆️ then "Add to Home Screen".',
     installHintGeneric: 'To install as an app: open the browser menu (⋮) and choose "Install app" / "Add to Home screen". If you opened this from WhatsApp, open it in Chrome first (⋮ → "Open in Chrome").',
+    reqLegend: '⁎ required',
+    syncedA11y: 'synced', syncingA11y: 'syncing', syncErrA11y: 'sync error',
     installedToast: 'PadelZit installed ✓',
     updateReady: '🔄 A new version of PadelZit is available',
     updateBtn: 'Refresh',
@@ -924,8 +979,13 @@ function sanitizeTournament(x) {
       x.players.some(p => typeof p !== 'string' || !p.trim())) return null;
   const n = x.players.length;
   const target = (Number.isInteger(x.target) && x.target >= 2 && x.target <= 500) ? x.target : 32;
-  const tour = newTournamentObj(x.players.slice(), target);
-  if (typeof x.id === 'string' && x.id) tour.id = x.id;
+  // Cap imported name length (defensive against oversized/hostile data).
+  const players = x.players.map(p => String(p).slice(0, 40));
+  const tour = newTournamentObj(players, target);
+  // Only accept a safe id charset; otherwise keep the freshly generated one.
+  // This closes an XSS sink where an imported/synced id is concatenated into
+  // inline onclick handlers on the home screen.
+  if (typeof x.id === 'string' && /^[A-Za-z0-9_-]{1,64}$/.test(x.id)) tour.id = x.id;
   if (Number.isInteger(x.createdAt)) tour.createdAt = x.createdAt;
   tour.finished = !!x.finished;
   tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
@@ -1098,6 +1158,7 @@ function applyLang() {
   set('setup-title', 'setupTitle');
   set('lcount', 'countLabel');
   set('ltarget', 'targetLabel');
+  set('req-legend', 'reqLegend');
   set('start-btn', 'start');
   set('setup-back-btn', 'back');
   set('lgame-target', 'gameTargetLabel');
@@ -1135,6 +1196,77 @@ function applyLang() {
   set('import-btn', 'importBtn');
   set('import-go', 'importGo');
   document.getElementById('import-box').placeholder = t('importPh');
+  ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
+}
+
+// Append a required-field marker (⁎) to a label, once.
+function markReq(id) {
+  const el = document.getElementById(id);
+  if (el && !el.querySelector('.req')) {
+    const s = document.createElement('span');
+    s.className = 'req';
+    s.textContent = '⁎';
+    s.setAttribute('aria-hidden', 'true');
+    el.appendChild(s);
+  }
+}
+
+/* ---------- effects (haptics, confetti, count-up) ---------- */
+
+const REDUCE = (function () {
+  try { return window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) { return false; }
+})();
+
+function haptic(pattern) {
+  if (REDUCE) return;
+  try { if (navigator.vibrate) navigator.vibrate(pattern); } catch (e) {}
+}
+
+function announce(msg) {
+  const el = document.getElementById('sr-status');
+  if (el) el.textContent = msg;
+}
+
+function countUp(el, to, ms) {
+  if (!el) return;
+  if (REDUCE) { el.textContent = to; return; }
+  const from = parseInt(el.textContent, 10) || 0;
+  if (from === to) { el.textContent = to; return; }
+  const t0 = performance.now();
+  (function frame(now) {
+    const k = Math.min(1, (now - t0) / ms);
+    el.textContent = Math.round(from + (to - from) * (1 - Math.pow(1 - k, 3)));
+    if (k < 1) requestAnimationFrame(frame);
+  })(t0);
+}
+
+function confettiBurst() {
+  if (REDUCE) return;
+  const cv = document.getElementById('confetti');
+  const ctx = cv.getContext('2d');
+  const W = innerWidth, H = innerHeight;
+  const dpr = Math.min(devicePixelRatio || 1, 2);
+  cv.width = W * dpr; cv.height = H * dpr;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  const cols = ['#fbbf24', '#cbd5e1', '#d97706', '#38bdf8', '#34d399'];
+  const P = [];
+  for (let i = 0; i < 120; i++) P.push({
+    x: W / 2 + (Math.random() - 0.5) * 80, y: H * 0.32,
+    vx: (Math.random() - 0.5) * 9, vy: Math.random() * -11 - 4,
+    r: Math.random() * 5 + 3, c: cols[Math.random() * cols.length | 0], rot: Math.random() * 6,
+  });
+  const t0 = performance.now();
+  (function tick(now) {
+    ctx.clearRect(0, 0, W, H);
+    const a = Math.max(0, 1 - (now - t0) / 2300);
+    P.forEach(p => {
+      p.vy += 0.28; p.x += p.vx; p.y += p.vy; p.rot += 0.16;
+      ctx.globalAlpha = a; ctx.fillStyle = p.c;
+      ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.rot);
+      ctx.fillRect(-p.r, -p.r, p.r * 2, p.r * 1.2); ctx.restore();
+    });
+    if (now - t0 < 2400) requestAnimationFrame(tick); else ctx.clearRect(0, 0, W, H);
+  })(t0);
 }
 
 /* ---------- navigation ---------- */
@@ -1181,12 +1313,16 @@ function renderSetup() {
     const lab = document.createElement('label');
     lab.htmlFor = 'p' + i;
     lab.textContent = t('player') + ' ' + (i + 1);
+    const star = document.createElement('span');
+    star.className = 'req'; star.textContent = '⁎'; star.setAttribute('aria-hidden', 'true');
+    lab.appendChild(star);
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.id = 'p' + i;
     inp.maxLength = 20;
     inp.autocomplete = 'off';
     inp.setAttribute('enterkeyhint', 'next');
+    inp.setAttribute('aria-required', 'true');
     inp.placeholder = t('namePh');
     inp.value = prev[i] || '';
     fields.appendChild(lab);
@@ -1339,10 +1475,16 @@ function saveGame() {
   document.getElementById('scoreB').value = '';
   render();
   showToast(t('savedToast', tour.history.length));
+  announce(t('savedToast', tour.history.length));
+  haptic(15);
   const box = document.getElementById('teams-box');
   box.classList.remove('flash');
   void box.offsetWidth;
   box.classList.add('flash');
+  const btn = document.getElementById('save-btn');
+  btn.classList.remove('save-ok');
+  void btn.offsetWidth;
+  btn.classList.add('save-ok');
 }
 
 /* ---------- history editing ---------- */
@@ -1404,6 +1546,9 @@ function finishTournament() {
   finishCancel();
   view = 'podium';
   render();
+  // Celebrate only the live crowning (not when merely viewing a finished one).
+  confettiBurst();
+  haptic([40, 60, 40, 60, 90]);
 }
 
 function resumeTournament() {
@@ -1755,8 +1900,25 @@ function scheduleCloudPush() {
   pushTimer = setTimeout(() => { syncNow(false); }, 1500);
 }
 
-function toggleUserMenu() {
-  document.getElementById('user-menu').classList.toggle('hidden');
+function toggleUserMenu(force) {
+  const menu = document.getElementById('user-menu');
+  const chip = document.getElementById('user-chip');
+  const open = force !== undefined ? force : menu.classList.contains('hidden');
+  menu.classList.toggle('hidden', !open);
+  chip.setAttribute('aria-expanded', open ? 'true' : 'false');
+  if (open) { const first = menu.querySelector('button'); if (first) first.focus(); }
+}
+
+function closeUserMenu() {
+  const menu = document.getElementById('user-menu');
+  if (!menu.classList.contains('hidden')) {
+    toggleUserMenu(false);
+    document.getElementById('user-chip').focus();
+  }
+}
+
+function chipKey(e) {
+  if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleUserMenu(); }
 }
 
 function renderCloud() {
@@ -1777,10 +1939,14 @@ function renderCloud() {
   document.getElementById('user-avatar').textContent = label ? label[0].toUpperCase() : '👤';
   document.getElementById('user-email').textContent = label;
   const key = syncStatus === 'syncing' ? 'cloudSyncing' : syncStatus === 'error' ? 'cloudSyncErr' : 'cloudSynced';
+  const a11yKey = syncStatus === 'syncing' ? 'syncingA11y' : syncStatus === 'error' ? 'syncErrA11y' : 'syncedA11y';
   document.getElementById('sync-dot').className = 'sync-dot ' +
     (syncStatus === 'syncing' ? 'syncing' : syncStatus === 'error' ? 'error' : 'ok');
+  document.getElementById('sync-dot').setAttribute('aria-label', t(a11yKey));
   document.getElementById('user-menu-status').textContent = t(key, label);
+  if (syncStatus !== lastSyncStatus) { announce(t(a11yKey)); lastSyncStatus = syncStatus; }
 }
+let lastSyncStatus = null;
 
 /* ---------- backup / restore ---------- */
 
@@ -1860,6 +2026,9 @@ function teamLabelInline(tour, team) {
   return team.map(i => tour.players[i]).join(sep);
 }
 
+// Remembers each player's last-rendered points so the cell can count up to the new value.
+let ptsCache = {};
+
 function renderLeaderboardInto(tbodyId, tour) {
   const order = rankOrder(tour);
   const tbody = document.getElementById(tbodyId);
@@ -1870,22 +2039,29 @@ function renderLeaderboardInto(tbodyId, tour) {
     const key = tour.points[i] + '/' + tour.gamesWon[i] + '/' + d;
     const rank = key === prevKey ? prevRank : idx + 1;
     prevKey = key; prevRank = rank;
+    const cacheKey = tbodyId + ':' + tour.id + ':' + tour.players[i];
+    const prevPts = ptsCache[cacheKey];
     const tr = document.createElement('tr');
+    tr.setAttribute('data-player', tour.players[i]);
     tr.innerHTML =
       '<td><span class="rank-badge rank-' + rank + '">' + rank + '</span></td>' +
       '<td>' + escapeHtml(tour.players[i]) + '</td>' +
-      '<td class="num pts">' + tour.points[i] + '</td>' +
-      '<td class="num diff ' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '">' + (d > 0 ? '+' : '') + d + '</td>' +
+      '<td class="num pts">' + (prevPts != null ? prevPts : tour.points[i]) + '</td>' +
+      '<td class="num diff ' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '"><bdi>' + (d > 0 ? '+' : '') + d + '</bdi></td>' +
       '<td class="num">' + tour.gamesWon[i] + '</td>' +
       '<td class="num">' + tour.gamesPlayed[i] + '</td>';
     tbody.appendChild(tr);
+    const ptsCell = tr.querySelector('.pts');
+    if (prevPts != null && prevPts !== tour.points[i]) countUp(ptsCell, tour.points[i], 600);
+    else ptsCell.textContent = tour.points[i];
+    ptsCache[cacheKey] = tour.points[i];
   });
 }
 
 function renderHistory(tour) {
   const list = document.getElementById('history-list');
   if (tour.history.length === 0) {
-    list.innerHTML = '<div class="empty-note">' + t('empty') + '</div>';
+    list.innerHTML = '<div class="empty-ball" aria-hidden="true">🎾</div><div class="empty-note">' + t('empty') + '</div>';
     return;
   }
   // Preserve values typed into an open edit row across re-renders
@@ -1913,9 +2089,9 @@ function renderHistory(tour) {
       const valB = stashB !== null ? stashB : g.scoreB;
       html +=
         '<div class="edit-row">' +
-          '<input type="number" id="edit-a" min="0" inputmode="numeric" value="' + escapeHtml(String(valA)) + '" oninput="editAutoFill(\'A\')">' +
+          '<input type="number" id="edit-a" min="0" inputmode="numeric" aria-label="' + escapeHtml(t('sharePts') + ': ' + teamLabelInline(tour, g.teamA)) + '" value="' + escapeHtml(String(valA)) + '" oninput="editAutoFill(\'A\')">' +
           '<span class="dash">—</span>' +
-          '<input type="number" id="edit-b" min="0" inputmode="numeric" value="' + escapeHtml(String(valB)) + '" oninput="editAutoFill(\'B\')">' +
+          '<input type="number" id="edit-b" min="0" inputmode="numeric" aria-label="' + escapeHtml(t('sharePts') + ': ' + teamLabelInline(tour, g.teamB)) + '" value="' + escapeHtml(String(valB)) + '" oninput="editAutoFill(\'B\')">' +
           '<button type="button" class="icon-btn ok" onclick="saveEdit(' + index + ')" aria-label="' + escapeHtml(t('editSave')) + '">✔</button>' +
           '<button type="button" class="icon-btn cancel" onclick="cancelEdit()" aria-label="' + escapeHtml(t('editCancel')) + '">✕</button>' +
         '</div>' +
@@ -1964,8 +2140,12 @@ function renderGame(tour) {
 function renderPodium(tour) {
   const order = rankOrder(tour);
   const scoreLine = i => tour.points[i] + ' ' + t('sharePts') + ' · ' + tour.gamesWon[i] + ' ' + t('shareWins');
-  document.getElementById('pod-1-name').textContent = tour.players[order[0]];
-  document.getElementById('pod-1-score').textContent = scoreLine(order[0]);
+  const champ = order[0];
+  document.getElementById('pod-1-name').textContent = tour.players[champ];
+  const p1 = document.getElementById('pod-1-score');
+  p1.innerHTML = '<span id="pod-1-pts">0</span> ' + escapeHtml(t('sharePts')) + ' · ' +
+    tour.gamesWon[champ] + ' ' + escapeHtml(t('shareWins'));
+  countUp(document.getElementById('pod-1-pts'), tour.points[champ], 700);
   document.getElementById('pod-2-name').textContent = tour.players[order[1]];
   document.getElementById('pod-2-score').textContent = scoreLine(order[1]);
   document.getElementById('pod-3-name').textContent = tour.players[order[2]];
@@ -1974,6 +2154,11 @@ function renderPodium(tour) {
   const wa = document.getElementById('wa-link');
   wa.href = 'https://wa.me/?text=' + encodeURIComponent(shareText(tour));
   document.getElementById('share-fallback').classList.add('hidden');
+  // Replay the medal entrance on each podium view.
+  if (!REDUCE) {
+    ['.podium-first .medal', '.podium-rest .p:nth-child(1) .medal', '.podium-rest .p:nth-child(2) .medal']
+      .forEach(sel => { const el = document.querySelector(sel); if (el) { el.style.animation = 'none'; void el.offsetWidth; el.style.animation = ''; } });
+  }
 }
 
 function renderHome() {
@@ -1981,7 +2166,7 @@ function renderHome() {
   renderCloud();
   const list = document.getElementById('tournament-list');
   if (db.tournaments.length === 0) {
-    list.innerHTML = '<div class="empty-note">' + t('noTours') + '</div>';
+    list.innerHTML = '<div class="empty-ball" aria-hidden="true">🎾</div><div class="empty-note">' + t('noTours') + '</div>';
   } else {
     list.innerHTML = '';
     db.tournaments.forEach(tour => {
@@ -2003,8 +2188,8 @@ function renderHome() {
         '</div>' +
         '<div class="tour-sub">' + subject + tour.players.map(escapeHtml).join(', ') + ' · ' + tour.history.length + ' ' + t('games') + '</div>' +
         '<div class="tour-actions">' +
-          '<button type="button" onclick="openTournament(\'' + tour.id + '\')">' + (tour.finished ? t('viewPodium') : t('continueTour')) + '</button>' +
-          '<button type="button" class="del" onclick="deleteTournament(\'' + tour.id + '\')">' + delLabel + '</button>' +
+          '<button type="button" onclick="openTournament(\'' + escapeHtml(tour.id) + '\')">' + (tour.finished ? t('viewPodium') : t('continueTour')) + '</button>' +
+          '<button type="button" class="del" onclick="deleteTournament(\'' + escapeHtml(tour.id) + '\')">' + delLabel + '</button>' +
         '</div>';
       list.appendChild(div);
     });
@@ -2053,7 +2238,11 @@ function render() {
   Object.values(screens).forEach(id => document.getElementById(id).classList.add('hidden'));
   const tour = current();
   if ((view === 'game' || view === 'podium') && !tour) view = 'home';
-  document.getElementById(screens[view]).classList.remove('hidden');
+  const activeEl = document.getElementById(screens[view]);
+  activeEl.classList.remove('hidden');
+  activeEl.classList.remove('screen-in');
+  void activeEl.offsetWidth;
+  activeEl.classList.add('screen-in');
   renderCloud(); // keep the user chip / cloud card correct on every screen
   if (view === 'home') renderHome();
   else if (view === 'setup') renderSetup();
@@ -2064,6 +2253,15 @@ function render() {
 document.getElementById('setup-form').addEventListener('submit', e => {
   e.preventDefault();
   startTournament();
+});
+
+// User-menu dismissal: Escape and outside-click close it and restore focus to the chip.
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeUserMenu(); });
+document.addEventListener('click', e => {
+  const menu = document.getElementById('user-menu');
+  if (menu.classList.contains('hidden')) return;
+  const chip = document.getElementById('user-chip');
+  if (!menu.contains(e.target) && !chip.contains(e.target)) toggleUserMenu(false);
 });
 
 // Another tab wrote to storage — re-read so this tab doesn't clobber its games.
