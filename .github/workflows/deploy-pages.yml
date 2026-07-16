@@ -28,6 +28,7 @@ jobs:
           cp index.html _site/index.html
           cp r.html _site/r.html
           cp privacy.html _site/privacy.html
+          cp og.png _site/og.png
           cp -r pwa/. _site/
       - uses: actions/configure-pages@v5
         with:
