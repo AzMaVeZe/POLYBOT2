@@ -1605,47 +1605,87 @@ function cloudLogout() {
   renderCloud();
 }
 
-// Start an OAuth login (Google/Facebook): redirect to Supabase, which sends the
-// browser to the provider and back to this app with tokens in the URL fragment.
-function doOAuth(provider) {
-  const redirectTo = location.origin + location.pathname;
-  location.href = CLOUD.url + '/auth/v1/authorize?provider=' + encodeURIComponent(provider) +
-    '&redirect_to=' + encodeURIComponent(redirectTo);
+const PKCE_KEY = 'padelzit-pkce';
+
+function b64url(buf) {
+  const s = btoa(String.fromCharCode.apply(null, new Uint8Array(buf)));
+  return s.replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 }
 
-// On return from an OAuth provider the session arrives in location.hash.
-// Turn it into a stored session, then clean the URL.
-async function handleOAuthRedirect() {
-  const hash = location.hash || '';
-  if (hash.indexOf('access_token=') === -1) {
-    if (hash.indexOf('error=') !== -1) {
-      history.replaceState(null, '', location.pathname + location.search);
-      showToast(t('oauthErr'));
-    }
-    return false;
-  }
-  const p = new URLSearchParams(hash.slice(1));
-  const access_token = p.get('access_token');
-  const refresh_token = p.get('refresh_token');
-  history.replaceState(null, '', location.pathname + location.search);
-  if (!access_token || !refresh_token) return false;
+function showCloudError(msg) {
+  const b = document.getElementById('cloud-error');
+  if (b) b.textContent = msg;
+}
+
+// Start an OAuth login (Google/Facebook). Uses the PKCE flow so every provider
+// comes back the same way (?code=...), which we then exchange for a session.
+async function doOAuth(provider) {
+  const redirectTo = location.origin + location.pathname;
+  let url = CLOUD.url + '/auth/v1/authorize?provider=' + encodeURIComponent(provider) +
+    '&redirect_to=' + encodeURIComponent(redirectTo);
   try {
-    const res = await fetch(CLOUD.url + '/auth/v1/user', {
-      headers: { apikey: CLOUD.key, Authorization: 'Bearer ' + access_token },
-    });
-    if (!res.ok) throw new Error('user');
-    const user = await res.json();
-    setSession({
-      access_token, refresh_token,
-      expires_at: Number(p.get('expires_at')) || undefined,
-      expires_in: Number(p.get('expires_in')) || undefined,
-      user: user,
-    });
-    return true;
-  } catch (e) {
-    showToast(t('oauthErr'));
+    const verifier = b64url(crypto.getRandomValues(new Uint8Array(64)));
+    const digest = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier));
+    store.setItem(PKCE_KEY, verifier);
+    url += '&code_challenge=' + encodeURIComponent(b64url(digest)) + '&code_challenge_method=s256';
+  } catch (e) { /* no crypto → fall back to implicit (hash) flow */ }
+  location.href = url;
+}
+
+// On return from an OAuth provider the session arrives either as tokens in the
+// URL hash (implicit) or as ?code=... (PKCE, e.g. Google). Handle both, surface
+// real errors, and clean the URL.
+async function handleOAuthRedirect() {
+  const hp = new URLSearchParams((location.hash || '').replace(/^#/, ''));
+  const qp = new URLSearchParams((location.search || '').replace(/^\?/, ''));
+  const get = k => hp.get(k) || qp.get(k);
+  if (!['access_token', 'code', 'error', 'error_description'].some(k => get(k))) return false;
+
+  const clean = () => history.replaceState(null, '', location.pathname);
+  const err = get('error') || get('error_code');
+  if (err) {
+    clean();
+    const desc = get('error_description');
+    showCloudError(t('oauthErr') + (desc ? ' (' + decodeURIComponent(desc.replace(/\+/g, ' ')) + ')' : ''));
     return false;
   }
+
+  const access_token = get('access_token');
+  const refresh_token = get('refresh_token');
+  const code = get('code');
+  clean();
+  try {
+    if (access_token && refresh_token) {
+      const res = await fetch(CLOUD.url + '/auth/v1/user', {
+        headers: { apikey: CLOUD.key, Authorization: 'Bearer ' + access_token },
+      });
+      if (!res.ok) throw new Error('user');
+      const user = await res.json();
+      setSession({
+        access_token, refresh_token,
+        expires_at: Number(get('expires_at')) || undefined,
+        expires_in: Number(get('expires_in')) || undefined,
+        user: user,
+      });
+      return true;
+    }
+    if (code) {
+      const verifier = store.getItem(PKCE_KEY);
+      store.removeItem(PKCE_KEY);
+      const res = await fetch(CLOUD.url + '/auth/v1/token?grant_type=pkce', {
+        method: 'POST',
+        headers: { apikey: CLOUD.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ auth_code: code, code_verifier: verifier }),
+      });
+      if (!res.ok) throw new Error('pkce');
+      setSession(await res.json());
+      return true;
+    }
+  } catch (e) {
+    showCloudError(t('oauthErr'));
+    return false;
+  }
+  return false;
 }
 
 function touch(tour) { tour.updatedAt = Date.now(); }
