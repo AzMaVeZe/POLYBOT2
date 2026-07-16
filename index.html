@@ -516,7 +516,9 @@
         <div class="oauth-sep" id="oauth-sep"><span id="oauth-or"></span></div>
         <button type="button" class="oauth-btn google" onclick="doOAuth('google')" id="google-btn"></button>
         <button type="button" class="oauth-btn facebook" onclick="doOAuth('facebook')" id="facebook-btn"></button>
+        <!-- Apple sign-in: re-enable once the Apple provider is configured in Supabase
         <button type="button" class="oauth-btn apple" onclick="doOAuth('apple')" id="apple-btn"></button>
+        -->
       </div>
     </div>
     <div class="card">
@@ -1126,7 +1128,6 @@ function applyLang() {
   set('oauth-or', 'cloudOr');
   document.getElementById('google-btn').innerHTML = '<span class="g">🔵</span>' + escapeHtml(t('googleBtn'));
   document.getElementById('facebook-btn').innerHTML = '<span class="g">📘</span>' + escapeHtml(t('facebookBtn'));
-  document.getElementById('apple-btn').innerHTML = '<span class="g"></span>' + escapeHtml(t('appleBtn'));
   set('menu-sync', 'cloudSyncBtn');
   set('menu-logout', 'cloudLogout');
   set('backup-title', 'backupTitle');
