@@ -518,6 +518,11 @@
   }
   #install-row { margin-bottom: 16px; }
   #install-btn { margin-bottom: 8px; }
+  .claim-btn { width: auto; padding: 3px 10px; font-size: 0.72rem; font-weight: 700; background: var(--card-2); color: var(--accent); border-radius: 999px; margin-inline-start: 6px; }
+  .me-star { color: var(--gold); margin-inline-start: 4px; }
+  .mystats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
+  .mystats-grid .v { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
+  .mystats-grid .k { font-size: 0.72rem; color: var(--muted); }
   .app-footer { text-align: center; padding: 8px 0 20px; }
   .app-footer a { color: var(--muted); font-size: 0.8rem; text-decoration: underline; }
   #fmt-hint { text-align: start; }
@@ -572,6 +577,10 @@
         <button type="button" class="oauth-btn apple" onclick="doOAuth('apple')" id="apple-btn"></button>
         -->
       </div>
+    </div>
+    <div class="card hidden" id="mystats-card">
+      <h2 id="mystats-title"></h2>
+      <div id="mystats-body"></div>
     </div>
     <div class="card" id="alltime-card">
       <h2 id="alltime-title"></h2>
@@ -647,6 +656,15 @@
       <div id="history-list"></div>
     </div>
 
+    <div class="card" id="live-card">
+      <h2 id="live-title"></h2>
+      <button type="button" onclick="shareLive()" id="share-live-btn"></button>
+      <div id="live-share" class="hidden">
+        <div class="hint" id="live-on" style="text-align:start"></div>
+        <a class="whatsapp" id="live-wa" target="_blank" rel="noopener noreferrer"></a>
+        <button type="button" class="secondary" onclick="copyPublicLink()" id="live-copy"></button>
+      </div>
+    </div>
     <button onclick="finishAsk()" class="secondary" id="finish-btn"></button>
     <div id="finish-confirm" class="hidden">
       <div class="error-msg" id="finish-question"></div>
@@ -748,6 +766,15 @@ const STR = {
     fmtMexicano: 'מקסיקנו',
     fmtHint: 'מקסיקנו: מסבב 2 הזוגות נקבעים לפי הדירוג (1+4 נגד 2+3) — משחקים צמודים יותר.',
     fmtLabelMex: 'מקסיקנו',
+    claimMe: 'זה אני',
+    claimedMe: 'סומנת בטורניר הזה ⭐',
+    myStatsTitle: '🌟 הסטטיסטיקות שלי',
+    myStatsTours: 'טורנירים', myStatsPts: 'נקודות', myStatsWon: 'ניצחונות', myStatsTitles: 'תארים',
+    liveTitle: '📡 צפייה חיה',
+    shareLiveBtn: '📡 שיתוף צפייה חיה',
+    shareLiveNeedsLogin: 'כדי לשתף צפייה חיה צריך להתחבר לחשבון',
+    liveOn: '✓ שידור חי פעיל — כל מי שיפתח את הקישור יראה את הטבלה מתעדכנת בזמן אמת',
+    liveWaText: 'צפו בטורניר הפאדל שלנו בזמן אמת 🎾',
     shareLinkTitle: '🔗 קישור ציבורי לתוצאות',
     makePublic: 'יצירת קישור ציבורי לשיתוף',
     publicOn: '✓ הקישור פעיל — כל מי שיפתח אותו יראה את התוצאות',
@@ -872,6 +899,15 @@ const STR = {
     fmtMexicano: 'Mexicano',
     fmtHint: 'Mexicano: from round 2, pairs are set by ranking (1+4 vs 2+3) — closer games.',
     fmtLabelMex: 'Mexicano',
+    claimMe: 'This is me',
+    claimedMe: 'Marked as you in this tournament ⭐',
+    myStatsTitle: '🌟 My stats',
+    myStatsTours: 'tournaments', myStatsPts: 'points', myStatsWon: 'wins', myStatsTitles: 'titles',
+    liveTitle: '📡 Live view',
+    shareLiveBtn: '📡 Share a live view',
+    shareLiveNeedsLogin: 'Sign in to share a live view',
+    liveOn: '✓ Live — anyone who opens the link sees the table update in real time',
+    liveWaText: 'Watch our padel tournament live 🎾',
     shareLinkTitle: '🔗 Public results link',
     makePublic: 'Create a public share link',
     publicOn: '✓ Link is live — anyone who opens it sees the results',
@@ -1030,6 +1066,14 @@ function sanitizeTournament(x) {
   tour.finishedAt = Number.isInteger(x.finishedAt) ? x.finishedAt : null;
   tour.updatedAt = Number.isInteger(x.updatedAt) ? x.updatedAt : null;
   tour.isPublic = !!x.isPublic;
+  // Claims: { email: playerIndex } — validate emails/indices before trusting.
+  tour.claims = {};
+  if (x.claims && typeof x.claims === 'object') {
+    Object.keys(x.claims).forEach(k => {
+      const v = x.claims[k];
+      if (typeof k === 'string' && k.length <= 254 && Number.isInteger(v) && v >= 0 && v < n) tour.claims[k] = v;
+    });
+  }
   const validTeams = g => {
     const all = [...g.teamA, ...g.teamB];
     return all.every(i => Number.isInteger(i) && i >= 0 && i < n) && new Set(all).size === 4;
@@ -1250,12 +1294,18 @@ function applyLang() {
   set('menu-logout', 'cloudLogout');
   set('menu-delete', 'deleteAccount');
   set('privacy-link', 'privacyLink');
+  set('mystats-title', 'myStatsTitle');
   set('lformat', 'formatLabel');
   set('fmt-hint', 'fmtHint');
   set('share-link-title', 'shareLinkTitle');
   set('make-public-btn', 'makePublic');
   set('public-on', 'publicOn');
   set('copy-link-btn', 'copyLink');
+  set('live-title', 'liveTitle');
+  set('share-live-btn', 'shareLiveBtn');
+  set('live-on', 'liveOn');
+  set('live-wa', 'waShare');
+  set('live-copy', 'copyLink');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
 }
 
@@ -2065,11 +2115,37 @@ async function deleteAccountAsk() {
   }
 }
 
+/* ---------- "this is me" claims ---------- */
+
+function claimMe(i) {
+  const tour = current();
+  if (!tour || !session) return;
+  tour.claims = tour.claims || {};
+  tour.claims[session.user.email] = i;
+  touch(tour);
+  saveDb();
+  render();
+  showToast(t('claimedMe'));
+  haptic(10);
+}
+
 /* ---------- public results link ---------- */
 
 function publicUrl(tour) {
   const base = location.origin + location.pathname.replace(/[^/]*$/, '');
   return base + 'r.html?t=' + encodeURIComponent(tour.id);
+}
+
+async function makeTournamentPublic(tour) {
+  await cloudPush();                       // make sure the row exists in the cloud
+  const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
+    method: 'PATCH',
+    headers: { Prefer: 'return=minimal' },
+    body: JSON.stringify({ is_public: true }),
+  });
+  if (!res.ok) throw new Error('patch ' + res.status);
+  tour.isPublic = true;
+  saveDb();
 }
 
 async function publishTournament() {
@@ -2078,17 +2154,30 @@ async function publishTournament() {
   const btn = document.getElementById('make-public-btn');
   btn.disabled = true;
   try {
-    await cloudPush();                       // make sure the row exists in the cloud
-    const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ is_public: true }),
-    });
-    if (!res.ok) throw new Error('patch ' + res.status);
-    tour.isPublic = true;
-    saveDb();
+    await makeTournamentPublic(tour);
     renderPodium(tour);
     copyPublicLink();
+  } catch (e) {
+    showToast(t('publicErr'));
+  }
+  btn.disabled = false;
+}
+
+// Live view: publish the in-progress tournament and reveal a WhatsApp/copy link.
+// Viewers open r.html which polls for updates.
+async function shareLive() {
+  const tour = current();
+  if (!tour) return;
+  if (!session) { showToast(t('shareLiveNeedsLogin')); return; }
+  const btn = document.getElementById('share-live-btn');
+  btn.disabled = true;
+  try {
+    if (!tour.isPublic) await makeTournamentPublic(tour);
+    const url = publicUrl(tour);
+    document.getElementById('live-wa').href = 'https://wa.me/?text=' +
+      encodeURIComponent(t('liveWaText') + '\n' + url);
+    document.getElementById('live-share').classList.remove('hidden');
+    btn.classList.add('hidden');
   } catch (e) {
     showToast(t('publicErr'));
   }
@@ -2140,6 +2229,7 @@ function renderLeaderboardInto(tbodyId, tour) {
   const order = rankOrder(tour);
   const tbody = document.getElementById(tbodyId);
   tbody.innerHTML = '';
+  const myClaim = session ? (tour.claims || {})[session.user.email] : undefined;
   let prevKey = null, prevRank = 0;
   order.forEach((i, idx) => {
     const d = diffOf(tour, i);
@@ -2148,11 +2238,15 @@ function renderLeaderboardInto(tbodyId, tour) {
     prevKey = key; prevRank = rank;
     const cacheKey = tbodyId + ':' + tour.id + ':' + tour.players[i];
     const prevPts = ptsCache[cacheKey];
+    // "This is me": signed-in users can claim one slot per tournament for their personal stats.
+    let nameCell = escapeHtml(tour.players[i]);
+    if (myClaim === i) nameCell += '<span class="me-star" title="' + escapeHtml(t('claimedMe')) + '">⭐</span>';
+    else if (session && myClaim === undefined) nameCell += '<button type="button" class="claim-btn" onclick="claimMe(' + i + ')">' + escapeHtml(t('claimMe')) + '</button>';
     const tr = document.createElement('tr');
     tr.setAttribute('data-player', tour.players[i]);
     tr.innerHTML =
       '<td><span class="rank-badge rank-' + rank + '">' + rank + '</span></td>' +
-      '<td>' + escapeHtml(tour.players[i]) + '</td>' +
+      '<td>' + nameCell + '</td>' +
       '<td class="num pts">' + (prevPts != null ? prevPts : tour.points[i]) + '</td>' +
       '<td class="num diff ' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '"><bdi>' + (d > 0 ? '+' : '') + d + '</bdi></td>' +
       '<td class="num">' + tour.gamesWon[i] + '</td>' +
@@ -2244,6 +2338,24 @@ function renderGame(tour) {
   }
   renderLeaderboardInto('leaderboard-body', tour);
   renderHistory(tour);
+  // Live-share card: only for signed-in organizers.
+  const liveCard = document.getElementById('live-card');
+  if (!session) {
+    liveCard.classList.add('hidden');
+  } else {
+    liveCard.classList.remove('hidden');
+    const shareBtn = document.getElementById('share-live-btn');
+    const shareRow = document.getElementById('live-share');
+    if (tour.isPublic) {
+      shareBtn.classList.add('hidden');
+      shareRow.classList.remove('hidden');
+      document.getElementById('live-wa').href = 'https://wa.me/?text=' +
+        encodeURIComponent(t('liveWaText') + '\n' + publicUrl(tour));
+    } else {
+      shareBtn.classList.remove('hidden');
+      shareRow.classList.add('hidden');
+    }
+  }
 }
 
 function renderPodium(tour) {
@@ -2315,6 +2427,29 @@ function renderHome() {
       list.appendChild(div);
     });
   }
+
+  // Personal stats: aggregate the slots the signed-in user claimed as "me".
+  const myCard = document.getElementById('mystats-card');
+  const email = session ? session.user.email : null;
+  if (email) {
+    let pts = 0, won = 0, games = 0, tours = 0, titles = 0;
+    db.tournaments.forEach(tour => {
+      const i = (tour.claims || {})[email];
+      if (i === undefined) return;
+      tours++; pts += tour.points[i]; won += tour.gamesWon[i]; games += tour.gamesPlayed[i];
+      if (tour.finished && tour.history.length > 0 && rankOrder(tour)[0] === i) titles++;
+    });
+    if (tours > 0) {
+      myCard.classList.remove('hidden');
+      document.getElementById('mystats-body').innerHTML =
+        '<div class="mystats-grid">' +
+          '<div><div class="v">' + tours + '</div><div class="k">' + t('myStatsTours') + '</div></div>' +
+          '<div><div class="v">' + pts + '</div><div class="k">' + t('myStatsPts') + '</div></div>' +
+          '<div><div class="v">' + won + '</div><div class="k">' + t('myStatsWon') + '</div></div>' +
+          '<div><div class="v">' + titles + '</div><div class="k">' + t('myStatsTitles') + '</div></div>' +
+        '</div>';
+    } else { myCard.classList.add('hidden'); }
+  } else { myCard.classList.add('hidden'); }
 
   // All-time leaderboard across every tournament, keyed by player name.
   const agg = {};
