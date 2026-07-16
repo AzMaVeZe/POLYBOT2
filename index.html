@@ -369,6 +369,32 @@
     text-align: center;
   }
   #toast.show { opacity: 1; }
+
+  #update-banner {
+    position: fixed;
+    bottom: 0; left: 0; right: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    background: #0c4a6e;
+    color: #e0f2fe;
+    padding: 12px 16px;
+    font-weight: 700;
+    font-size: 0.9rem;
+    box-shadow: 0 -4px 14px rgba(0,0,0,0.4);
+    z-index: 60;
+  }
+  #update-banner button {
+    width: auto;
+    padding: 8px 18px;
+    background: var(--accent);
+    color: #06283d;
+    font-weight: 800;
+  }
+  #install-row { margin-bottom: 16px; }
+  #install-btn { margin-bottom: 8px; }
 </style>
 </head>
 <body>
@@ -381,6 +407,10 @@
 
   <!-- HOME SCREEN -->
   <div id="home-screen" class="hidden">
+    <div id="install-row" class="hidden">
+      <button type="button" onclick="doInstall()" id="install-btn" class="hidden"></button>
+      <div class="hint" id="install-hint" style="text-align:start"></div>
+    </div>
     <button onclick="gotoSetup()" id="new-tour-btn"></button>
     <div style="height:16px"></div>
     <div class="card" id="tour-list-card">
@@ -528,6 +558,10 @@
     <button class="secondary" onclick="gotoHome()" id="podium-home-btn"></button>
   </div>
 </div>
+<div id="update-banner" class="hidden" role="alert">
+  <span id="update-text"></span>
+  <button type="button" id="update-btn" onclick="applyUpdate()"></button>
+</div>
 <div id="toast" role="status" aria-live="polite"></div>
 
 <script>
@@ -555,6 +589,12 @@ const STR = {
   he: {
     appTitle: '🎾 פאדלז׳יט',
     subtitle: 'אמריקנו · 4 שחקנים · הזוגות מתערבבים אחרי כל משחק',
+    installBtn: '📲 התקן את PadelZit במסך הבית',
+    installHintIos: 'להתקנה באייפון: הקישו על כפתור השיתוף בסאפארי ⬆️ ואז "הוסף למסך הבית".',
+    installHintGeneric: 'להתקנה כאפליקציה: פתחו את התפריט של הדפדפן (⋮) ובחרו "התקן אפליקציה" / "הוסף למסך הבית". אם פתחתם מוואטסאפ — פתחו קודם בכרום (⋮ ← "פתח בכרום").',
+    installedToast: 'PadelZit הותקנה ✓',
+    updateReady: '🔄 גרסה חדשה של PadelZit זמינה',
+    updateBtn: 'רענון',
     newTour: '➕ טורניר חדש',
     tours: '📁 הטורנירים שלי',
     noTours: 'עוד אין טורנירים — צרו את הראשון!',
@@ -650,6 +690,12 @@ const STR = {
   en: {
     appTitle: '🎾 PadelZit',
     subtitle: 'Americano · 4 players · partners shuffle after every game',
+    installBtn: '📲 Install PadelZit on your home screen',
+    installHintIos: 'To install on iPhone: tap the Share button in Safari ⬆️ then "Add to Home Screen".',
+    installHintGeneric: 'To install as an app: open the browser menu (⋮) and choose "Install app" / "Add to Home screen". If you opened this from WhatsApp, open it in Chrome first (⋮ → "Open in Chrome").',
+    installedToast: 'PadelZit installed ✓',
+    updateReady: '🔄 A new version of PadelZit is available',
+    updateBtn: 'Refresh',
     newTour: '➕ New tournament',
     tours: '📁 My tournaments',
     noTours: 'No tournaments yet — create your first!',
@@ -946,6 +992,9 @@ function applyLang() {
   set('app-title', 'appTitle');
   set('subtitle', 'subtitle');
   set('new-tour-btn', 'newTour');
+  set('install-btn', 'installBtn');
+  set('update-text', 'updateReady');
+  set('update-btn', 'updateBtn');
   set('tours-title', 'tours');
   set('alltime-title', 'alltime');
   set('ath-player', 'athPlayer'); set('ath-titles', 'athTitles'); set('ath-points', 'athPoints');
@@ -1727,6 +1776,7 @@ function renderPodium(tour) {
 }
 
 function renderHome() {
+  updateInstallUI();
   renderCloud();
   const list = document.getElementById('tournament-list');
   if (db.tournaments.length === 0) {
@@ -1826,17 +1876,85 @@ window.addEventListener('storage', e => {
   render();
 });
 
-// Register the service worker so the app installs and works offline.
-// Skipped inside the claude.ai preview (sandboxed) and on non-secure origins.
-(function () {
-  const host = location.hostname;
-  const secure = location.protocol === 'https:' || host === 'localhost' || host === '127.0.0.1';
-  if ('serviceWorker' in navigator && secure && !host.endsWith('claude.ai')) {
-    window.addEventListener('load', () => {
-      navigator.serviceWorker.register('sw.js').catch(() => {});
-    });
+// ---- Install ("Add to Home Screen") + service-worker update handling ----
+const PWA_HOST = ('serviceWorker' in navigator) &&
+  (location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1') &&
+  !location.hostname.endsWith('claude.ai');
+
+let deferredPrompt = null;
+let waitingWorker = null;
+let reloadingForUpdate = false;
+
+function isStandalone() {
+  return window.matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+}
+function isIos() { return /iP(hone|ad|od)/i.test(navigator.userAgent); }
+
+function updateInstallUI() {
+  const row = document.getElementById('install-row');
+  const btn = document.getElementById('install-btn');
+  const hint = document.getElementById('install-hint');
+  if (!PWA_HOST || isStandalone()) { row.classList.add('hidden'); return; }
+  row.classList.remove('hidden');
+  if (deferredPrompt) {
+    btn.classList.remove('hidden');
+    hint.textContent = '';
+  } else {
+    btn.classList.add('hidden');
+    hint.textContent = isIos() ? t('installHintIos') : t('installHintGeneric');
   }
-})();
+}
+
+async function doInstall() {
+  if (!deferredPrompt) return;
+  deferredPrompt.prompt();
+  try { await deferredPrompt.userChoice; } catch (e) {}
+  deferredPrompt = null;
+  updateInstallUI();
+}
+
+window.addEventListener('beforeinstallprompt', e => {
+  e.preventDefault();
+  deferredPrompt = e;
+  updateInstallUI();
+});
+window.addEventListener('appinstalled', () => {
+  deferredPrompt = null;
+  updateInstallUI();
+  showToast(t('installedToast'));
+});
+
+function showUpdateBanner(worker) {
+  waitingWorker = worker;
+  document.getElementById('update-banner').classList.remove('hidden');
+}
+function applyUpdate() {
+  if (waitingWorker) {
+    reloadingForUpdate = true;
+    waitingWorker.postMessage({ type: 'SKIP_WAITING' });
+  }
+}
+
+if (PWA_HOST) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('sw.js').then(reg => {
+      // A waiting worker already present (update downloaded on a previous visit).
+      if (reg.waiting && navigator.serviceWorker.controller) showUpdateBanner(reg.waiting);
+      reg.addEventListener('updatefound', () => {
+        const nw = reg.installing;
+        if (!nw) return;
+        nw.addEventListener('statechange', () => {
+          if (nw.state === 'installed' && navigator.serviceWorker.controller) showUpdateBanner(nw);
+        });
+      });
+    }).catch(() => {});
+    // Reload to pick up new assets only after the user tapped Refresh
+    // (not on the initial claim, which also fires controllerchange).
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (reloadingForUpdate) location.reload();
+    });
+  });
+}
 
 loadDb();
 loadSession();

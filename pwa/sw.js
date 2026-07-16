@@ -1,6 +1,6 @@
 // PadelZit service worker — caches the app shell for offline use.
 // Cross-origin requests (e.g. Supabase cloud sync) are never intercepted.
-const CACHE = 'padelzit-v4';
+const CACHE = 'padelzit-v5';
 const SHELL = [
   './',
   './index.html',
@@ -12,7 +12,13 @@ const SHELL = [
 ];
 
 self.addEventListener('install', e => {
-  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()));
+  // Don't skipWaiting automatically — the page shows an "update ready" banner
+  // and asks this worker to activate only when the user taps Refresh.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+});
+
+self.addEventListener('message', e => {
+  if (e.data && e.data.type === 'SKIP_WAITING') self.skipWaiting();
 });
 
 self.addEventListener('activate', e => {
