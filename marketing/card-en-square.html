@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en" dir="ltr">
+<head>
+<meta charset="UTF-8">
+<style>
+  *{margin:0;padding:0;box-sizing:border-box}
+  html,body{width:1080px;height:1080px;overflow:hidden}
+  body{
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    background:
+      radial-gradient(900px 700px at 82% -8%, rgba(56,189,248,.22), transparent 60%),
+      radial-gradient(800px 700px at 8% 108%, rgba(251,191,36,.16), transparent 55%),
+      linear-gradient(155deg,#0b1526 0%,#0f172a 55%,#111e36 100%);
+    color:#e2e8f0;position:relative;
+  }
+  .court{position:absolute;inset:0;opacity:.10}
+  .court span{position:absolute;background:#7dd3fc}
+  .wrap{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:space-between;padding:96px 84px 84px}
+  .top{display:flex;align-items:center;gap:26px}
+  .ball{width:118px;height:118px;border-radius:50%;
+    background:radial-gradient(circle at 34% 30%,#eaf6a4,#c6f23f 55%,#9ac70f);
+    box-shadow:0 12px 34px rgba(154,199,15,.35),inset -10px -12px 22px rgba(0,0,0,.18);position:relative;flex:0 0 auto;overflow:hidden}
+  .ball::before{content:"";position:absolute;top:-8px;right:-88px;width:150%;height:150%;
+    border:4px solid rgba(255,255,255,.85);border-radius:50%;clip-path:inset(0 0 0 64%)}
+  .brand{display:flex;flex-direction:column;line-height:1}
+  .brand .he{font-size:96px;font-weight:900;letter-spacing:-1px}
+  .brand .en{font-size:30px;font-weight:800;letter-spacing:5px;white-space:nowrap;color:#38bdf8;margin-top:12px}
+  .mid{text-align:center}
+  .headline{font-size:78px;font-weight:900;line-height:1.14;text-wrap:balance}
+  .headline .hl{color:#fbbf24}
+  .sub{font-size:38px;color:#a5b4c8;margin-top:28px;font-weight:600}
+  .podium{display:flex;align-items:flex-end;gap:22px;margin:8px 0 26px}
+  .bar{width:104px;border-radius:14px 14px 0 0;background:linear-gradient(180deg,#273449,#1b2740);
+    display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding-top:14px;box-shadow:0 10px 26px rgba(0,0,0,.3)}
+  .bar .medal{font-size:48px}
+  .bar.b1{height:210px;background:linear-gradient(180deg,#fbbf24,#b8860b)}
+  .bar.b2{height:158px;background:linear-gradient(180deg,#cbd5e1,#7c899b)}
+  .bar.b3{height:122px;background:linear-gradient(180deg,#d97706,#8a4b06)}
+  .badges{display:flex;gap:20px;flex-wrap:wrap;justify-content:center}
+  .badge{background:rgba(30,41,59,.85);border:1px solid rgba(148,163,184,.25);color:#e2e8f0;
+    font-size:34px;font-weight:800;padding:16px 32px;border-radius:999px}
+  .badge.accent{background:linear-gradient(135deg,#38bdf8,#0ea5e9);color:#06283d;border:none}
+  .badge.gold{background:linear-gradient(135deg,#fbbf24,#fde68a);color:#422006;border:none}
+</style>
+</head>
+<body>
+  <div class="court">
+    <span style="top:0;bottom:0;left:50%;width:4px"></span>
+    <span style="left:0;right:0;top:50%;height:4px"></span>
+    <span style="top:80px;bottom:80px;left:80px;width:4px"></span>
+    <span style="top:80px;bottom:80px;right:80px;width:4px"></span>
+    <span style="left:80px;right:80px;top:80px;height:4px"></span>
+    <span style="left:80px;right:80px;bottom:80px;height:4px"></span>
+  </div>
+
+  <div class="wrap">
+    <div class="top">
+      <div class="ball"></div>
+      <div class="brand">
+        <div class="he">PadelZit</div>
+        <div class="en">PADEL SCOREKEEPER</div>
+      </div>
+    </div>
+
+    <div class="mid">
+      <div class="headline">Padel tournament scoring<br><span class="hl">Americano &amp; Mexicano</span></div>
+      <div class="sub">Live ranking &amp; podium — everyone follows along</div>
+    </div>
+
+    <div class="podium">
+      <div class="bar b2"><div class="medal">🥈</div></div>
+      <div class="bar b1"><div class="medal">🥇</div></div>
+      <div class="bar b3"><div class="medal">🥉</div></div>
+    </div>
+
+    <div class="badges">
+      <div class="badge accent">Free</div>
+      <div class="badge">No signup</div>
+      <div class="badge gold">4–8 players</div>
+    </div>
+  </div>
+</body>
+</html>
