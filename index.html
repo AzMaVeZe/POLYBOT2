@@ -1139,7 +1139,7 @@ function sanitizeTournament(x) {
 }
 
 function loadDb() {
-  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [] };
+  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [], ownerId: null };
   try {
     const raw = store.getItem(DB_KEY);
     if (raw) {
@@ -1150,6 +1150,8 @@ function loadDb() {
         if (Number.isInteger(parsed.lastTarget)) db.lastTarget = parsed.lastTarget;
         if (parsed.lastFormat === 'mexicano' || parsed.lastFormat === 'americano') db.lastFormat = parsed.lastFormat;
         if (Array.isArray(parsed.deletedIds)) db.deletedIds = parsed.deletedIds.filter(x => typeof x === 'string');
+        // Which account these local tournaments belong to (null = guest data, not yet claimed).
+        if (typeof parsed.ownerId === 'string') db.ownerId = parsed.ownerId;
       }
     }
   } catch (e) { /* corrupted storage — start fresh */ }
@@ -1873,6 +1875,33 @@ function clearSession() {
   store.removeItem(SESSION_KEY);
 }
 
+// Keep the local database scoped to the signed-in account. Prevents one user's
+// tournaments from leaking to (or being pushed into) another account when they
+// share a device. Call right after a session is established, before syncing.
+// Returns true if local data was wiped for a different owner.
+function reconcileOwner() {
+  if (!session || !session.user) return false;
+  const uid = session.user.id;
+  if (db.ownerId == null) {
+    // Guest data being claimed by its first account — adopt and let it sync up.
+    db.ownerId = uid;
+    saveDb();
+    return false;
+  }
+  if (db.ownerId !== uid) {
+    // A different account signed in on this device — start clean and pull theirs.
+    db.tournaments = [];
+    db.deletedIds = [];
+    db.lastPlayers = null;
+    db.ownerId = uid;
+    activeId = null;
+    view = 'home';
+    saveDb();
+    return true;
+  }
+  return false;
+}
+
 async function ensureFreshSession() {
   if (!session) return;
   if (session.expires_at * 1000 - Date.now() > 60000) return;
@@ -1929,7 +1958,9 @@ async function cloudAuth(path, isSignup) {
   if (body && body.access_token) {
     setSession(body);
     document.getElementById('cloud-pass').value = '';
+    reconcileOwner();
     renderCloud();
+    render();
     if (isSignup) showToast(t('cloudSignupOk'));
     syncNow(true);
   } else {
@@ -1940,7 +1971,18 @@ async function cloudAuth(path, isSignup) {
 
 function cloudLogout() {
   clearSession();
+  // Remove this account's data from the device so the next person starts clean.
+  // It stays safe in the cloud and returns on the next sign-in.
+  db.tournaments = [];
+  db.deletedIds = [];
+  db.lastPlayers = null;
+  db.ownerId = null;
+  activeId = null;
+  view = 'home';
+  pulling = true;
+  try { saveDb(); } finally { pulling = false; }
   renderCloud();
+  render();
 }
 
 const PKCE_KEY = 'padelzit-pkce';
@@ -2673,6 +2715,9 @@ if (PWA_HOST) {
 
 loadDb();
 loadSession();
+// Scope local data to the restored account (claims pre-existing guest data for
+// the signed-in user; wipes it if it belonged to a different account).
+reconcileOwner();
 // Reopen the most recent tournament automatically if it's still live.
 if (db.tournaments.length > 0 && !db.tournaments[0].finished) {
   activeId = db.tournaments[0].id;
@@ -2685,13 +2730,13 @@ render();
 // Complete an OAuth redirect if we just came back from Google/Facebook,
 // otherwise resume any stored session.
 handleOAuthRedirect().then(loggedIn => {
-  if (loggedIn) { renderCloud(); syncNow(true); }
+  if (loggedIn) { reconcileOwner(); renderCloud(); render(); syncNow(true); }
   else if (session) syncNow(true);
 });
 // Safety net: if OAuth tokens arrive without a full reload, process them too.
 window.addEventListener('hashchange', () => {
   if ((location.hash || '').indexOf('access_token=') !== -1) {
-    handleOAuthRedirect().then(ok => { if (ok) { renderCloud(); syncNow(true); } });
+    handleOAuthRedirect().then(ok => { if (ok) { reconcileOwner(); renderCloud(); render(); syncNow(true); } });
   }
 });
 </script>
