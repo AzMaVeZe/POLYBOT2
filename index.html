@@ -95,6 +95,16 @@
   @keyframes breathe { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: .4; transform: scale(1.4); } }
   #user-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
+  /* Guest-device note: makes it clear that, without signing in, games live only on this device. */
+  #guest-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    margin-top: 10px; padding: 10px 12px; border-radius: 10px;
+    background: var(--card-2); border: 1px solid rgba(148,163,184,.22);
+    color: var(--muted); font-size: .82rem; line-height: 1.4; }
+  #guest-note .guest-note-link { background: none; border: none; padding: 0; margin: 0;
+    color: var(--accent); font-weight: 800; font-size: .82rem; cursor: pointer;
+    text-decoration: underline; min-height: 0; width: auto; }
+  #guest-note .guest-note-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
   /* Screen entrance */
   .screen-in { animation: screenIn .18s ease-out; }
   @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -572,6 +582,11 @@
       <div class="hint" id="install-hint" style="text-align:start"></div>
     </div>
     <button onclick="gotoSetup()" id="new-tour-btn"></button>
+    <div id="guest-note" class="hidden" role="note">
+      <span aria-hidden="true">👤</span>
+      <span id="guest-note-text"></span>
+      <button type="button" class="guest-note-link" id="guest-note-link" onclick="scrollToCloud()"></button>
+    </div>
     <div style="height:16px"></div>
     <div class="card" id="tour-list-card">
       <h2 id="tours-title"></h2>
@@ -840,6 +855,8 @@ const STR = {
     thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'נצ׳', thGames: 'מש׳',
     cloudTitle: '☁️ חשבון ענן',
     cloudHint: 'התחברות שומרת את כל הטורנירים בענן ומסנכרנת אוטומטית בין המכשירים שלך. אפשר להמשיך גם בלי חשבון — הכול יישמר במכשיר.',
+    guestNote: 'לא מחובר/ת. המשחקים נשמרים על המכשיר הזה בלבד.',
+    guestNoteLink: 'התחברות לסנכרון',
     cloudEmail: 'אימייל',
     cloudPass: 'סיסמה (לפחות 6 תווים)',
     cloudLogin: 'התחברות',
@@ -972,6 +989,8 @@ const STR = {
     thPlayer: 'Player', thPoints: 'Points', thWon: 'W', thGames: 'GP',
     cloudTitle: '☁️ Cloud account',
     cloudHint: 'Signing in saves all tournaments to the cloud and syncs them across your devices. You can keep playing without an account — everything stays on this device.',
+    guestNote: 'Not signed in. Games are saved on this device only.',
+    guestNoteLink: 'Sign in to sync',
     cloudEmail: 'Email',
     cloudPass: 'Password (6+ characters)',
     cloudLogin: 'Sign in',
@@ -1309,6 +1328,8 @@ function applyLang() {
   document.getElementById('google-btn').innerHTML = '<span class="g">🔵</span>' + escapeHtml(t('googleBtn'));
   document.getElementById('facebook-btn').innerHTML = '<span class="g">📘</span>' + escapeHtml(t('facebookBtn'));
   set('menu-sync', 'cloudSyncBtn');
+  set('guest-note-text', 'guestNote');
+  set('guest-note-link', 'guestNoteLink');
   set('menu-logout', 'cloudLogout');
   set('menu-delete', 'deleteAccount');
   set('privacy-link', 'privacyLink');
@@ -2072,6 +2093,15 @@ function scheduleCloudPush() {
   pushTimer = setTimeout(() => { syncNow(false); }, 1500);
 }
 
+function scrollToCloud() {
+  const card = document.getElementById('cloud-card');
+  if (card) {
+    card.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
+    const email = document.getElementById('cloud-email');
+    if (email) setTimeout(() => email.focus({ preventScroll: true }), REDUCE ? 0 : 300);
+  }
+}
+
 function toggleUserMenu(force) {
   const menu = document.getElementById('user-menu');
   const chip = document.getElementById('user-chip');
@@ -2097,15 +2127,18 @@ function renderCloud() {
   const card = document.getElementById('cloud-card');
   const chip = document.getElementById('user-chip');
   const menu = document.getElementById('user-menu');
+  const guest = document.getElementById('guest-note');
   if (!session) {
     // Signed out: show the full cloud card so people can log in; hide the chip.
     if (card) card.classList.remove('hidden');
+    if (guest) guest.classList.remove('hidden');
     chip.classList.add('hidden');
     menu.classList.add('hidden');
     return;
   }
   // Signed in: replace the whole card with a compact user chip in the top bar.
   if (card) card.classList.add('hidden');
+  if (guest) guest.classList.add('hidden');
   chip.classList.remove('hidden');
   const label = (session.user.name || session.user.email || '').trim();
   document.getElementById('user-avatar').textContent = label ? label[0].toUpperCase() : '👤';
