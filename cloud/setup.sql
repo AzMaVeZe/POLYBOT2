@@ -25,12 +25,14 @@ create policy own_all on public.tournaments
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- Anyone (even signed-out) can read a row the owner marked public — powers the
--- read-only public results page (r.html).
+-- Anyone with the share link can read a row the owner marked public — powers
+-- the read-only public results page (r.html), which always uses the anon key.
+-- Deliberately NOT granted to `authenticated`: the app's sync reads with the
+-- user's token, and public rows must never mix into another account's pull.
 drop policy if exists public_read on public.tournaments;
 create policy public_read on public.tournaments
   for select
-  to anon, authenticated
+  to anon
   using (is_public = true);
 
 -- Self-serve account + data deletion (GDPR / Israeli PPL right to erasure).
