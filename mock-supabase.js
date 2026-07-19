@@ -5,6 +5,7 @@ const users = {};   // email -> {id, password}
 const rows = {};    // id -> {id, user_id, data}
 const tokens = {};  // access_token -> user_id
 const codes = {};   // auth_code -> user_id  (PKCE)
+const profiles = {}; // user_id -> {user_id, email, name, nickname, roster}
 let counter = 0;
 
 const CORS = {
@@ -151,6 +152,30 @@ const server = http.createServer((req, res) => {
         if (rows[id] && rows[id].user_id === uid) delete rows[id];
         res.writeHead(204, CORS); res.end(); return;
       }
+    }
+
+    // Player profiles: own-row read/write + exact-match directory lookup.
+    if (path === '/rest/v1/profiles') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      if (req.method === 'GET') {
+        const p = profiles[uid];
+        return json(res, 200, p ? [p] : []);
+      }
+      if (req.method === 'POST') {
+        const row = Array.isArray(data) ? data[0] : data;
+        profiles[uid] = { user_id: uid, email: row.email, name: row.name || null, nickname: row.nickname || null, roster: row.roster || [] };
+        res.writeHead(201, CORS); res.end(); return;
+      }
+    }
+    if (path === '/rest/v1/rpc/find_player' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const q = String((data || {}).q || '').trim().toLowerCase();
+      const hit = Object.values(profiles).find(p =>
+        (p.email && p.email.toLowerCase() === q) ||
+        (p.nickname && p.nickname.toLowerCase() === q));
+      return json(res, 200, hit ? { uid: hit.user_id, name: hit.name, nickname: hit.nickname } : null);
     }
 
     // Account-free live publish: create/update an ownerless row keyed by

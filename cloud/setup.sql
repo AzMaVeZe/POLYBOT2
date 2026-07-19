@@ -72,12 +72,48 @@ $$;
 revoke all on function public.stop_live(text, text) from public;
 grant execute on function public.stop_live(text, text) to anon, authenticated;
 
+-- Player profiles + personal roster. Each account has a display name, an
+-- optional unique nickname, and a private roster (the players they organize
+-- for). Rows are readable/writable by their owner only.
+create table if not exists public.profiles (
+  user_id uuid primary key default auth.uid(),
+  email text not null,
+  name text,
+  nickname text,
+  roster jsonb not null default '[]'::jsonb,
+  updated_at timestamptz not null default now()
+);
+create unique index if not exists profiles_nickname_key
+  on public.profiles (lower(nickname))
+  where nickname is not null and nickname <> '';
+alter table public.profiles enable row level security;
+drop policy if exists profiles_own on public.profiles;
+create policy profiles_own on public.profiles
+  for all
+  using (auth.uid() = user_id)
+  with check (auth.uid() = user_id);
+
+-- Directory lookup: find one registered player by EXACT email or nickname.
+-- Deliberately not a free-text search (no user enumeration); returns only the
+-- public fields, to signed-in callers.
+create or replace function public.find_player(q text)
+returns jsonb language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('uid', user_id, 'name', name, 'nickname', nickname)
+  from public.profiles
+  where lower(email) = lower(trim(q))
+     or (nickname is not null and nickname <> '' and lower(nickname) = lower(trim(q)))
+  limit 1
+$$;
+revoke all on function public.find_player(text) from public, anon;
+grant execute on function public.find_player(text) to authenticated;
+
 -- Self-serve account + data deletion (GDPR / Israeli PPL right to erasure).
 -- Deletes only the caller's own rows and auth user via auth.uid().
 create or replace function public.delete_account() returns void
 language plpgsql security definer set search_path = public, auth as $$
 begin
   delete from public.tournaments where user_id = auth.uid();
+  delete from public.profiles where user_id = auth.uid();
   delete from auth.users where id = auth.uid();
 end;
 $$;

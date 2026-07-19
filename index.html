@@ -105,6 +105,10 @@
     text-decoration: underline; min-height: 0; width: auto; }
   #guest-note .guest-note-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
+  .inline-row { display: flex; gap: 8px; align-items: center; }
+  .inline-row input { flex: 1; margin-bottom: 0; min-width: 0; }
+  .inline-row button { width: auto; flex: 0 0 auto; margin: 0; padding: 10px 16px; }
+  .link-badge { color: var(--green); font-size: .75rem; font-weight: 800; white-space: nowrap; }
   .pname { background: none; border: none; width: auto; min-height: 0; padding: 2px 6px;
     margin: 0; color: inherit; font: inherit; font-weight: inherit; cursor: pointer;
     border-radius: 8px; border: 1px dashed transparent; }
@@ -580,6 +584,11 @@
   </div>
   <div id="user-menu" class="hidden">
     <div class="menu-status" id="user-menu-status" aria-live="polite"></div>
+    <label for="menu-nick" id="lmenu-nick"></label>
+    <div class="inline-row">
+      <input type="text" id="menu-nick" maxlength="20" autocomplete="off">
+      <button type="button" class="secondary" onclick="saveNickname()" id="menu-nick-save"></button>
+    </div>
     <button type="button" class="secondary" onclick="syncNow(true)" id="menu-sync" style="margin-top:0"></button>
     <button type="button" class="secondary" onclick="cloudLogout()" id="menu-logout"></button>
     <button type="button" class="secondary danger" onclick="deleteAccountAsk()" id="menu-delete"></button>
@@ -652,6 +661,16 @@
         <label id="lcount"></label>
         <div class="count-row" id="count-row"></div>
         <div id="name-fields"></div>
+        <div class="hint" id="roster-hint" style="text-align:start"></div>
+        <div id="dir-search" class="hidden">
+          <label for="dir-q" id="ldir-q"></label>
+          <div class="inline-row">
+            <input type="text" id="dir-q" maxlength="254" autocomplete="off">
+            <button type="button" class="secondary" onclick="dirFind()" id="dir-btn"></button>
+          </div>
+          <div class="hint" id="dir-result" style="text-align:start" aria-live="polite"></div>
+        </div>
+        <datalist id="roster-list"></datalist>
         <label id="lformat"></label>
         <div class="count-row" id="format-row"></div>
         <div class="hint" id="fmt-hint" class="hidden"></div>
@@ -958,6 +977,17 @@ const STR = {
     gameDeleted: 'המשחק נמחק והדירוג עודכן',
     swapPick: 'בחרו שחקן שני להחלפה (הקשה חוזרת מבטלת)',
     swapDone: 'ההרכב עודכן',
+    nickLabel: 'כינוי (מאפשר לחברים לאתר אתכם ולשבץ אתכם בטורניר)',
+    nickSaveBtn: 'שמירה',
+    nickSaved: 'הכינוי נשמר',
+    nickTaken: 'הכינוי תפוס — נסו כינוי אחר',
+    rosterHint: 'שם מהרשימה שלכם מזוהה ומקושר אוטומטית; כל שם אחר נשאר שחקן אנונימי.',
+    dirLabel: 'הוספת שחקן רשום (מייל או כינוי מדויק)',
+    dirBtn: 'איתור',
+    dirFound: 'נמצא ושובץ',
+    dirNotFound: 'לא נמצא שחקן רשום עם המייל/כינוי הזה',
+    dirErr: 'האיתור נכשל — בדקו את החיבור ונסו שוב',
+    linkedBadge: '✓ מקושר',
     home: '🏠 מסך הבית',
     podium: '🎉 תוצאות הטורניר',
     finalTable: 'הטבלה הסופית',
@@ -1106,6 +1136,17 @@ const STR = {
     gameDeleted: 'Game deleted, standings updated',
     swapPick: 'Pick a second player to swap (tap again to cancel)',
     swapDone: 'Matchup updated',
+    nickLabel: 'Nickname (lets friends find you and add you to a tournament)',
+    nickSaveBtn: 'Save',
+    nickSaved: 'Nickname saved',
+    nickTaken: 'Nickname taken — try another',
+    rosterHint: 'Names from your list link automatically; any other name stays an anonymous player.',
+    dirLabel: 'Add a registered player (exact email or nickname)',
+    dirBtn: 'Find',
+    dirFound: 'Found and added',
+    dirNotFound: 'No registered player with that email/nickname',
+    dirErr: 'Lookup failed — check your connection and retry',
+    linkedBadge: '✓ linked',
     home: '🏠 Home',
     podium: '🎉 Tournament results',
     finalTable: 'Final table',
@@ -1237,8 +1278,54 @@ function sanitizeTournament(x) {
   return tour;
 }
 
+/* ---------- player roster (my players) ---------- */
+
+// Roster entries: {n: display name, nick, em, uid}. uid present = a registered
+// player (results can be attributed to their account); uid null = anonymous.
+function sanitizeRoster(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [], seen = new Set();
+  arr.forEach(e => {
+    if (!e || typeof e !== 'object') return;
+    const n = typeof e.n === 'string' ? e.n.trim().slice(0, 40) : '';
+    if (!n) return;
+    const uid = (typeof e.uid === 'string' && e.uid.length <= 64 && e.uid.indexOf('@') === -1) ? e.uid : null;
+    const key = uid || 'n:' + n.toLowerCase();
+    if (seen.has(key)) return;
+    seen.add(key);
+    out.push({
+      n: n,
+      nick: typeof e.nick === 'string' && e.nick.trim() ? e.nick.trim().slice(0, 20) : null,
+      em: (typeof e.em === 'string' && e.em.indexOf('@') !== -1) ? e.em.trim().slice(0, 254).toLowerCase() : null,
+      uid: uid,
+    });
+  });
+  return out.slice(0, 100);
+}
+
+function rosterUpsert(entry) {
+  const e = sanitizeRoster([entry])[0];
+  if (!e) return;
+  const at = db.roster.findIndex(x =>
+    (e.uid && x.uid === e.uid) ||
+    (!e.uid && !x.uid && x.n.toLowerCase() === e.n.toLowerCase()));
+  if (at >= 0) db.roster[at] = Object.assign({}, db.roster[at], e);
+  else db.roster.push(e);
+  if (db.roster.length > 100) db.roster = db.roster.slice(-100);
+}
+
+// Match typed text against my roster: by name, nickname, or email.
+function rosterMatch(q) {
+  const v = String(q || '').trim().toLowerCase();
+  if (!v) return null;
+  return db.roster.find(x =>
+    x.n.toLowerCase() === v ||
+    (x.nick && x.nick.toLowerCase() === v) ||
+    (x.em && x.em === v)) || null;
+}
+
 function loadDb() {
-  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [], ownerId: null };
+  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [], ownerId: null, roster: [], profile: null };
   try {
     const raw = store.getItem(DB_KEY);
     if (raw) {
@@ -1251,6 +1338,13 @@ function loadDb() {
         if (Array.isArray(parsed.deletedIds)) db.deletedIds = parsed.deletedIds.filter(x => typeof x === 'string');
         // Which account these local tournaments belong to (null = guest data, not yet claimed).
         if (typeof parsed.ownerId === 'string') db.ownerId = parsed.ownerId;
+        db.roster = sanitizeRoster(parsed.roster);
+        if (parsed.profile && typeof parsed.profile === 'object') {
+          db.profile = {
+            name: typeof parsed.profile.name === 'string' ? parsed.profile.name.slice(0, 40) : null,
+            nickname: typeof parsed.profile.nickname === 'string' ? parsed.profile.nickname.slice(0, 20) : null,
+          };
+        }
       }
     }
   } catch (e) { /* corrupted storage — start fresh */ }
@@ -1518,6 +1612,11 @@ function applyLang() {
   set('live-copy', 'copyLink');
   set('cloud-open-btn', 'cloudOpenBtn');
   set('target-hint', 'targetHint');
+  set('lmenu-nick', 'nickLabel');
+  set('menu-nick-save', 'nickSaveBtn');
+  set('roster-hint', 'rosterHint');
+  set('ldir-q', 'dirLabel');
+  set('dir-btn', 'dirBtn');
   set('live-stop', 'liveStop');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
 }
@@ -1688,18 +1787,45 @@ function renderSetup() {
     meBtn.onclick = () => selectMe(i);
     row.appendChild(lab);
     row.appendChild(meBtn);
+    const badge = document.createElement('span');
+    badge.className = 'link-badge';
+    badge.id = 'link-badge-' + i;
+    row.insertBefore(badge, meBtn);
     const inp = document.createElement('input');
     inp.type = 'text';
     inp.id = 'p' + i;
-    inp.maxLength = 20;
+    inp.maxLength = 254;
     inp.autocomplete = 'off';
     inp.setAttribute('enterkeyhint', 'next');
     inp.setAttribute('aria-required', 'true');
+    inp.setAttribute('list', 'roster-list');
     inp.placeholder = t('namePh');
     inp.value = prev[i] || '';
+    inp.addEventListener('input', () => updateLinkBadge(i));
     fields.appendChild(row);
     fields.appendChild(inp);
+    updateLinkBadge(i);
   }
+  // Roster suggestions (name + nickname/email as the hint line).
+  const dl = document.getElementById('roster-list');
+  dl.innerHTML = '';
+  db.roster.forEach(e => {
+    const o = document.createElement('option');
+    o.value = e.n;
+    o.label = [e.nick, e.uid ? '✓' : ''].filter(Boolean).join(' ');
+    dl.appendChild(o);
+  });
+  document.getElementById('roster-hint').classList.toggle('hidden', db.roster.length === 0);
+  document.getElementById('dir-search').classList.toggle('hidden', !session);
+}
+
+// Green "linked" badge when the typed name resolves to a registered player.
+function updateLinkBadge(i) {
+  const inp = document.getElementById('p' + i);
+  const b = document.getElementById('link-badge-' + i);
+  if (!inp || !b) return;
+  const m = rosterMatch(inp.value);
+  b.textContent = m && m.uid ? t('linkedBadge') : '';
 }
 function openTournament(id) {
   activeId = id;
@@ -1711,20 +1837,72 @@ function openTournament(id) {
 
 /* ---------- setup ---------- */
 
-function startTournament() {
+// Directory lookup by EXACT email or nickname (privacy: no free-text search
+// over all users). Found players join the roster and fill the next empty slot.
+async function dirFind() {
+  const out = document.getElementById('dir-result');
+  const q = document.getElementById('dir-q').value.trim();
+  if (!q || !session) return;
+  out.textContent = '…';
+  try {
+    const res = await sbFetch('/rest/v1/rpc/find_player', { method: 'POST', body: JSON.stringify({ q: q }) });
+    if (!res.ok) throw new Error('http ' + res.status);
+    const hit = await res.json();
+    if (!hit || !hit.uid) { out.textContent = t('dirNotFound'); return; }
+    const display = (hit.name || hit.nickname || q.split('@')[0]).slice(0, 40);
+    rosterUpsert({ n: display, nick: hit.nickname, em: q.indexOf('@') !== -1 ? q : null, uid: hit.uid });
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+    for (let i = 0; i < setupCount; i++) {
+      const inp = document.getElementById('p' + i);
+      if (inp && !inp.value.trim()) { inp.value = display; break; }
+    }
+    renderSetup();
+    document.getElementById('dir-q').value = '';
+    out.textContent = t('dirFound') + ': ' + display + (hit.nickname ? ' (' + hit.nickname + ')' : '');
+  } catch (e) { out.textContent = t('dirErr'); }
+}
+
+async function startTournament() {
   const names = [];
   for (let i = 0; i < setupCount; i++) names.push(document.getElementById('p' + i).value.trim());
   const err = document.getElementById('setup-error');
   if (names.some(n => !n)) { err.textContent = t('errNames'); return; }
-  const unique = new Set(names.map(n => n.toLowerCase()));
-  if (unique.size < names.length) { err.textContent = t('errUnique'); return; }
   const targetPoints = parseScore(document.getElementById('target').value);
   if (isNaN(targetPoints) || targetPoints < 2 || targetPoints > 500) { err.textContent = t('errTarget'); return; }
   err.textContent = '';
+  // Resolve each slot: roster match (name/nickname/email) links a registered
+  // player; a typed email is also looked up in the directory. Anything else
+  // stays an anonymous player. Emails never end up as display names.
+  const links = new Array(names.length).fill(null);
+  for (let i = 0; i < names.length; i++) {
+    let m = rosterMatch(names[i]);
+    if (!m && session && names[i].indexOf('@') !== -1) {
+      try {
+        const res = await sbFetch('/rest/v1/rpc/find_player', { method: 'POST', body: JSON.stringify({ q: names[i] }) });
+        if (res.ok) {
+          const hit = await res.json();
+          if (hit && hit.uid) m = { n: (hit.name || hit.nickname || names[i].split('@')[0]).slice(0, 40), nick: hit.nickname, em: names[i].toLowerCase(), uid: hit.uid };
+        }
+      } catch (e) { /* offline — keep anonymous */ }
+    }
+    if (m) {
+      names[i] = m.n;
+      links[i] = m.uid;
+      rosterUpsert(m);
+    } else {
+      if (names[i].indexOf('@') !== -1) names[i] = names[i].split('@')[0];
+      names[i] = names[i].slice(0, 20);
+      rosterUpsert({ n: names[i] });
+    }
+  }
+  const unique = new Set(names.map(n => n.toLowerCase()));
+  if (unique.size < names.length) { err.textContent = t('errUnique'); return; }
   const tour = newTournamentObj(names, targetPoints, setupFormat);
+  tour.claims = {};
+  links.forEach((uid, i) => { if (uid) tour.claims[uid] = i; });
   if (setupMe !== null && setupMe < names.length) {
-    tour.meIndex = setupMe;                                  // local "this is me" (star)
-    if (session) tour.claims = { [session.user.id]: setupMe }; // account-linked personal stats (opaque id, never email)
+    tour.meIndex = setupMe;                                    // local "this is me" (star)
+    if (session) tour.claims[session.user.id] = setupMe;       // account-linked personal stats (opaque id, never email)
   }
   db.tournaments.unshift(tour);
   db.lastPlayers = names.slice();
@@ -2195,6 +2373,8 @@ function reconcileOwner() {
     db.tournaments = [];
     db.deletedIds = [];
     db.lastPlayers = null;
+    db.roster = [];
+    db.profile = null;
     db.ownerId = uid;
     activeId = null;
     view = 'home';
@@ -2279,6 +2459,8 @@ function cloudLogout() {
   db.deletedIds = [];
   db.lastPlayers = null;
   db.ownerId = null;
+  db.roster = [];
+  db.profile = null;
   activeId = null;
   view = 'home';
   pulling = true;
@@ -2373,6 +2555,51 @@ async function handleOAuthRedirect() {
 function touch(tour) { tour.updatedAt = Date.now(); }
 function stampOf(tour) { return tour.updatedAt || tour.createdAt || 0; }
 
+/* ---------- profile (name, nickname, roster) sync ---------- */
+
+async function profilePull() {
+  try {
+    const res = await sbFetch('/rest/v1/profiles?user_id=eq.' + encodeURIComponent(session.user.id) + '&select=name,nickname,roster');
+    if (!res.ok) return;                       // table may not exist yet — fine
+    const rows = await res.json();
+    if (rows.length) {
+      db.profile = {
+        name: rows[0].name || null,
+        nickname: rows[0].nickname || null,
+      };
+      sanitizeRoster(rows[0].roster).forEach(rosterUpsert);
+    }
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+  } catch (e) { /* offline / not configured */ }
+}
+
+async function profilePush() {
+  try {
+    const res = await sbFetch('/rest/v1/profiles?on_conflict=user_id', {
+      method: 'POST',
+      headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({
+        user_id: session.user.id,
+        email: session.user.email,
+        name: (db.profile && db.profile.name) || session.user.name || null,
+        nickname: (db.profile && db.profile.nickname) || null,
+        roster: db.roster,
+      }),
+    });
+    return res.ok ? null : res.status;
+  } catch (e) { return 0; }
+}
+
+async function saveNickname() {
+  if (!session) return;
+  const v = document.getElementById('menu-nick').value.trim().slice(0, 20);
+  db.profile = db.profile || {};
+  db.profile.nickname = v || null;
+  pulling = true; try { saveDb(); } finally { pulling = false; }
+  const status = await profilePush();
+  showToast(t(status === 409 ? 'nickTaken' : 'nickSaved'));
+}
+
 async function cloudPull() {
   // Only this account's own rows. Without the user_id filter, PostgREST also
   // returns every row readable via the public_read RLS policy (tournaments
@@ -2426,8 +2653,9 @@ async function syncNow(alsoPull) {
   syncStatus = 'syncing';
   renderCloud();
   try {
-    if (alsoPull !== false) await cloudPull();
+    if (alsoPull !== false) { await cloudPull(); await profilePull(); }
     await cloudPush();
+    await profilePush();
     syncStatus = 'idle';
   } catch (e) {
     syncStatus = 'error';
@@ -2475,6 +2703,7 @@ function toggleUserMenu(force) {
   const menu = document.getElementById('user-menu');
   const chip = document.getElementById('user-chip');
   const open = force !== undefined ? force : menu.classList.contains('hidden');
+  if (open) document.getElementById('menu-nick').value = (db.profile && db.profile.nickname) || '';
   menu.classList.toggle('hidden', !open);
   chip.setAttribute('aria-expanded', open ? 'true' : 'false');
   if (open) { const first = menu.querySelector('button'); if (first) first.focus(); }
