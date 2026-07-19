@@ -105,6 +105,13 @@
     text-decoration: underline; min-height: 0; width: auto; }
   #guest-note .guest-note-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
+  .pname { background: none; border: none; width: auto; min-height: 0; padding: 2px 6px;
+    margin: 0; color: inherit; font: inherit; font-weight: inherit; cursor: pointer;
+    border-radius: 8px; border: 1px dashed transparent; }
+  .pname:active { transform: none; }
+  .pname.swap-sel { background: var(--accent); color: #06283d; font-weight: 800; }
+  .team .pname:hover, #resting-label .pname:hover { border-color: rgba(148,163,184,.45); }
+  .icon-btn.danger.confirm { background: var(--red); color: #450a0a; }
   .court-label { font-size: .8rem; font-weight: 800; color: var(--accent); margin: 10px 0 4px;
     text-transform: uppercase; letter-spacing: .5px; }
 
@@ -131,7 +138,10 @@
   @keyframes shine { to { background-position: -200% 0; } }
 
   /* Empty-state ball */
-  .empty-ball { font-size: 2.4rem; opacity: .35; text-align: center; margin-bottom: 6px; animation: float 3s ease-in-out infinite; }
+  .empty-ball { opacity: .4; text-align: center; margin-bottom: 6px; animation: float 3s ease-in-out infinite; }
+  .empty-ball svg { width: 44px; height: 44px; }
+  #brand-h1 { display: flex; align-items: center; justify-content: center; gap: 10px; }
+  .title-ball svg { width: 30px; height: 30px; display: block; }
   @keyframes float { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-6px); } }
 
   /* Required-field marker */
@@ -574,7 +584,7 @@
     <button type="button" class="secondary" onclick="cloudLogout()" id="menu-logout"></button>
     <button type="button" class="secondary danger" onclick="deleteAccountAsk()" id="menu-delete"></button>
   </div>
-  <h1 id="app-title">🎾 פאדלז׳יט</h1>
+  <h1 id="brand-h1"><span class="title-ball" aria-hidden="true"></span><span id="app-title">פאדלז׳יט</span></h1>
   <div class="subtitle" id="subtitle"></div>
 
   <!-- HOME SCREEN -->
@@ -729,10 +739,6 @@
     <div class="card" id="live-card">
       <h2 id="live-title"></h2>
       <button type="button" onclick="shareLive()" id="share-live-btn"></button>
-      <div id="live-guest" class="hidden">
-        <div class="hint" id="live-guest-hint" style="text-align:start"></div>
-        <button type="button" class="secondary" onclick="goToLogin()" id="live-guest-btn"></button>
-      </div>
       <div id="live-share" class="hidden">
         <div class="hint" id="live-on" style="text-align:start"></div>
         <a class="whatsapp" id="live-wa" target="_blank" rel="noopener noreferrer"></a>
@@ -824,7 +830,7 @@ const store = (() => {
 
 const STR = {
   he: {
-    appTitle: '🎾 פאדלז׳יט',
+    appTitle: 'פאדלז׳יט',
     subtitle: 'אמריקנו · מקסיקנו · 4–12 שחקנים · הזוגות מתערבבים כל משחק',
     installBtn: '📲 התקן את PadelZit במסך הבית',
     installHintIos: 'להתקנה באייפון: הקישו על כפתור השיתוף בסאפארי ⬆️ ואז "הוסף למסך הבית".',
@@ -947,6 +953,11 @@ const STR = {
     finishHintMid: 'טיפ: כדאי לסיים אחרי סבב שלם (כל 3 משחקים) — כך כולם שיחקו עם כולם.',
     finishHintUneven: 'שימו לב: לא כולם שיחקו אותו מספר משחקים.',
     claimedMe: 'זה אני — התוצאות נזקפות לחשבון שלי',
+    delGame: 'מחיקת המשחק',
+    delGameConfirm: 'בטוח? עוד לחיצה מוחקת',
+    gameDeleted: 'המשחק נמחק והדירוג עודכן',
+    swapPick: 'בחרו שחקן שני להחלפה (הקשה חוזרת מבטלת)',
+    swapDone: 'ההרכב עודכן',
     home: '🏠 מסך הבית',
     podium: '🎉 תוצאות הטורניר',
     finalTable: 'הטבלה הסופית',
@@ -967,7 +978,7 @@ const STR = {
     dir: 'rtl', lang: 'he', locale: 'he-IL',
   },
   en: {
-    appTitle: '🎾 PadelZit',
+    appTitle: 'PadelZit',
     subtitle: 'Americano · Mexicano · 4–12 players · partners shuffle every game',
     installBtn: '📲 Install PadelZit on your home screen',
     installHintIos: 'To install on iPhone: tap the Share button in Safari ⬆️ then "Add to Home Screen".',
@@ -1090,6 +1101,11 @@ const STR = {
     finishHintMid: 'Tip: finishing after a full round (every 3 games) means everyone partnered everyone.',
     finishHintUneven: 'Note: not everyone has played the same number of games.',
     claimedMe: 'This is me — results count toward my account',
+    delGame: 'Delete game',
+    delGameConfirm: 'Sure? Tap again to delete',
+    gameDeleted: 'Game deleted, standings updated',
+    swapPick: 'Pick a second player to swap (tap again to cancel)',
+    swapDone: 'Matchup updated',
     home: '🏠 Home',
     podium: '🎉 Tournament results',
     finalTable: 'Final table',
@@ -1141,6 +1157,7 @@ function saveDb() {
   if (session && session.user && db.ownerId == null) db.ownerId = session.user.id;
   store.setItem(DB_KEY, JSON.stringify(db));
   scheduleCloudPush();
+  scheduleGuestPublish();
 }
 
 // Rebuild a tournament from untrusted stored data; returns null if unusable.
@@ -1167,6 +1184,8 @@ function sanitizeTournament(x) {
   // Absent (legacy) counts as NOT guest-made, so pre-ownership data is never
   // adopted by whichever account happens to sign in next on this device.
   tour.guestMade = x.guestMade === true;
+  // Published from this or another guest device via the write-token channel.
+  tour.liveGuest = x.liveGuest === true;
   // Claims: { email: playerIndex } — validate emails/indices before trusting.
   tour.claims = {};
   if (x.claims && typeof x.claims === 'object') {
@@ -1407,6 +1426,16 @@ function toggleLang() {
 }
 
 
+// The one brand ball — lime padel ball with white seams — used in the header,
+// empty states, PWA icons and marketing cards alike.
+const BRAND_BALL_SVG = '<svg viewBox="0 0 64 64" aria-hidden="true">' +
+  '<defs><radialGradient id="ballg" cx="36%" cy="30%" r="75%">' +
+  '<stop offset="0%" stop-color="#eef8b0"/><stop offset="55%" stop-color="#c6f23f"/>' +
+  '<stop offset="100%" stop-color="#97c40e"/></radialGradient></defs>' +
+  '<circle cx="32" cy="32" r="30" fill="url(#ballg)"/>' +
+  '<path d="M 10 12 C 26 26, 26 38, 10 52" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/>' +
+  '<path d="M 54 12 C 38 26, 38 38, 54 52" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/></svg>';
+
 // Real provider marks (inline SVG — the app is self-contained, no CDN).
 const GOOGLE_G_SVG = '<svg class="g" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">' +
   '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>' +
@@ -1488,8 +1517,6 @@ function applyLang() {
   set('live-wa', 'waShare');
   set('live-copy', 'copyLink');
   set('cloud-open-btn', 'cloudOpenBtn');
-  set('live-guest-hint', 'shareLiveNeedsLogin');
-  set('live-guest-btn', 'loginCta');
   set('target-hint', 'targetHint');
   set('live-stop', 'liveStop');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
@@ -1845,6 +1872,7 @@ function saveGame() {
     tour.history.push(game2);
   }
   advanceAfterSave(tour);
+  swapSel = null;
   lastSaveAt = Date.now();
   touch(tour);
   saveDb();
@@ -1902,6 +1930,51 @@ function saveEdit(index) {
   touch(tour);
   saveDb();
   render();
+}
+
+// Two-tap delete for a mistakenly saved game; standings and the announced
+// next round recompute from what's left.
+let pendingDeleteGame = -1, pendingDeleteGameTimer = null;
+function deleteGame(index) {
+  const tour = current(); if (!tour) return;
+  if (pendingDeleteGame !== index) {
+    pendingDeleteGame = index;
+    clearTimeout(pendingDeleteGameTimer);
+    pendingDeleteGameTimer = setTimeout(() => { pendingDeleteGame = -1; render(); }, 3000);
+    render();
+    return;
+  }
+  clearTimeout(pendingDeleteGameTimer);
+  pendingDeleteGame = -1;
+  tour.history.splice(index, 1);
+  recompute(tour);
+  if (tour.players.length === 4) tour.pairingCursor = tour.history.length % 3;
+  if (!tour.finished) assignNextRound(tour);
+  editingIndex = -1;
+  touch(tour);
+  saveDb();
+  render();
+  showToast(t('gameDeleted'));
+  haptic(10);
+}
+
+// Manual matchup fix: tap one player, then another (on court or resting) to
+// swap them — for when the court reality differs from the algorithm.
+let swapSel = null;
+function tapSwap(i) {
+  const tour = current(); if (!tour || tour.finished) return;
+  if (swapSel === null) { swapSel = i; render(); showToast(t('swapPick')); return; }
+  if (swapSel === i) { swapSel = null; render(); return; }
+  const a = swapSel, b = i;
+  const swapVal = p => (p === a ? b : (p === b ? a : p));
+  if (tour.next) tour.next = tour.next.map(team => team.map(swapVal));
+  if (tour.next2) tour.next2 = tour.next2.map(team => team.map(swapVal));
+  swapSel = null;
+  touch(tour);
+  saveDb();
+  render();
+  showToast(t('swapDone'));
+  haptic(8);
 }
 
 /* ---------- finish / podium ---------- */
@@ -1981,6 +2054,14 @@ function deleteTournament(id) {
   }
   clearTimeout(pendingDeleteTimer);
   pendingDeleteId = null;
+  const doomed = db.tournaments.find(x => x.id === id);
+  if (doomed && doomed.liveGuest && doomed.isPublic) {
+    fetch(CLOUD.url + '/rest/v1/rpc/stop_live', {
+      method: 'POST',
+      headers: { apikey: CLOUD.key, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tid: id, token: liveToken() }),
+    }).catch(() => {});
+  }
   db.tournaments = db.tournaments.filter(x => x.id !== id);
   if (activeId === id) activeId = null;
   if (!db.deletedIds.includes(id)) db.deletedIds.push(id);
@@ -2326,8 +2407,9 @@ async function cloudPush() {
     if (res.ok || res.status === 404) db.deletedIds = db.deletedIds.filter(x => x !== id);
     else throw Object.assign(new Error('delete'), { status: res.status });
   }
-  if (db.tournaments.length > 0) {
-    const rows = db.tournaments.map(tr => ({ id: tr.id, data: tr }));
+  const ownRows = db.tournaments.filter(tr => !tr.liveGuest);
+  if (ownRows.length > 0) {
+    const rows = ownRows.map(tr => ({ id: tr.id, data: tr }));
     const res = await sbFetch('/rest/v1/tournaments?on_conflict=id', {
       method: 'POST',
       headers: { Prefer: 'resolution=merge-duplicates,return=minimal' },
@@ -2497,6 +2579,44 @@ function publicUrl(tour) {
   return appUrl() + 'r.html?t=' + encodeURIComponent(tour.id);
 }
 
+// --- Account-free live sharing -------------------------------------------
+// The device keeps one random write token; publish_live/stop_live RPCs accept
+// it in place of a session, so a guest can broadcast without signing up.
+const LIVE_TOKEN_KEY = 'padelzit-live-token';
+function liveToken() {
+  let tok = store.getItem(LIVE_TOKEN_KEY);
+  if (!tok) { tok = randomIdSuffix() + randomIdSuffix(); store.setItem(LIVE_TOKEN_KEY, tok); }
+  return tok;
+}
+
+// Public payloads never carry account/device-linked fields.
+function scrubForPublic(tour) {
+  const c = JSON.parse(JSON.stringify(tour));
+  delete c.claims; delete c.meIndex; delete c.guestMade; delete c.liveGuest;
+  return c;
+}
+
+async function publishLiveGuest(tour) {
+  const res = await fetch(CLOUD.url + '/rest/v1/rpc/publish_live', {
+    method: 'POST',
+    headers: { apikey: CLOUD.key, 'Content-Type': 'application/json' },
+    body: JSON.stringify({ tid: tour.id, token: liveToken(), tdata: scrubForPublic(tour) }),
+  });
+  if (!res.ok) throw new Error('publish ' + res.status);
+}
+
+// Keep guest broadcasts fresh: any local save re-publishes live tournaments.
+let guestPubTimer = null;
+function scheduleGuestPublish() {
+  const live = db.tournaments.filter(tr => tr.liveGuest && tr.isPublic && !tr.finished);
+  const done = db.tournaments.filter(tr => tr.liveGuest && tr.isPublic && tr.finished);
+  if (!live.length && !done.length) return;
+  clearTimeout(guestPubTimer);
+  guestPubTimer = setTimeout(() => {
+    live.concat(done).forEach(tr => publishLiveGuest(tr).catch(() => {}));
+  }, 1500);
+}
+
 async function makeTournamentPublic(tour) {
   await cloudPush();                       // make sure the row exists in the cloud
   const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
@@ -2512,16 +2632,26 @@ async function makeTournamentPublic(tour) {
 // Revoke a live/public share: the r.html link stops working immediately.
 async function stopSharing() {
   const tour = current();
-  if (!tour || !session) return;
+  if (!tour) return;
   const btn = document.getElementById('live-stop');
   if (btn) btn.disabled = true;
   try {
-    const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
-      method: 'PATCH',
-      headers: { Prefer: 'return=minimal' },
-      body: JSON.stringify({ is_public: false }),
-    });
-    if (!res.ok) throw new Error('patch ' + res.status);
+    if (tour.liveGuest) {
+      const res = await fetch(CLOUD.url + '/rest/v1/rpc/stop_live', {
+        method: 'POST',
+        headers: { apikey: CLOUD.key, 'Content-Type': 'application/json' },
+        body: JSON.stringify({ tid: tour.id, token: liveToken() }),
+      });
+      if (!res.ok) throw new Error('stop ' + res.status);
+    } else {
+      if (!session) return;
+      const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
+        method: 'PATCH',
+        headers: { Prefer: 'return=minimal' },
+        body: JSON.stringify({ is_public: false }),
+      });
+      if (!res.ok) throw new Error('patch ' + res.status);
+    }
     tour.isPublic = false;
     saveDb();
     render();
@@ -2534,11 +2664,18 @@ async function stopSharing() {
 
 async function publishTournament() {
   const tour = current();
-  if (!tour || !session) return;
+  if (!tour) return;
   const btn = document.getElementById('make-public-btn');
   btn.disabled = true;
   try {
-    await makeTournamentPublic(tour);
+    if (session) {
+      await makeTournamentPublic(tour);
+    } else {
+      await publishLiveGuest(tour);
+      tour.liveGuest = true;
+      tour.isPublic = true;
+      pulling = true; try { saveDb(); } finally { pulling = false; }
+    }
     renderPodium(tour);
     copyPublicLink();
   } catch (e) {
@@ -2552,11 +2689,17 @@ async function publishTournament() {
 async function shareLive() {
   const tour = current();
   if (!tour) return;
-  if (!session) { showToast(t('shareLiveNeedsLogin')); return; }
   const btn = document.getElementById('share-live-btn');
   btn.disabled = true;
   try {
-    if (!tour.isPublic) await makeTournamentPublic(tour);
+    if (session) {
+      if (!tour.isPublic) await makeTournamentPublic(tour);
+    } else if (!tour.isPublic) {
+      await publishLiveGuest(tour);
+      tour.liveGuest = true;
+      tour.isPublic = true;
+      pulling = true; try { saveDb(); } finally { pulling = false; }
+    }
     const url = publicUrl(tour);
     document.getElementById('live-wa').href = 'https://wa.me/?text=' +
       encodeURIComponent(t('liveWaText') + '\n' + url);
@@ -2598,7 +2741,10 @@ function escapeHtml(s) {
 }
 
 function teamLabel(tour, team) {
-  return team.map(i => escapeHtml(tour.players[i])).join('<br>');
+  return team.map(i =>
+    '<button type="button" class="pname' + (swapSel === i ? ' swap-sel' : '') + '"' +
+    ' aria-pressed="' + (swapSel === i) + '" onclick="tapSwap(' + i + ')">' +
+    escapeHtml(tour.players[i]) + '</button>').join('<br>');
 }
 
 function teamLabelInline(tour, team) {
@@ -2646,7 +2792,7 @@ function renderLeaderboardInto(tbodyId, tour) {
 function renderHistory(tour) {
   const list = document.getElementById('history-list');
   if (tour.history.length === 0) {
-    list.innerHTML = '<div class="empty-ball" aria-hidden="true">🎾</div><div class="empty-note">' + t('empty') + '</div>';
+    list.innerHTML = '<div class="empty-ball" aria-hidden="true">' + BRAND_BALL_SVG + '</div><div class="empty-note">' + t('empty') + '</div>';
     return;
   }
   // Preserve values typed into an open edit row across re-renders
@@ -2685,7 +2831,10 @@ function renderHistory(tour) {
       html +=
         '<span class="history-score">' + g.scoreA + '–' + g.scoreB + '</span>' +
         (gTarget !== tour.target ? '<span class="history-target"><bdi dir="ltr">🎯 ' + gTarget + '</bdi></span>' : '') +
-        '<button type="button" class="icon-btn" onclick="startEdit(' + index + ')" title="' + escapeHtml(t('editTitle')) + '" aria-label="' + escapeHtml(t('editTitle')) + '">✎</button>';
+        '<button type="button" class="icon-btn" onclick="startEdit(' + index + ')" title="' + escapeHtml(t('editTitle')) + '" aria-label="' + escapeHtml(t('editTitle')) + '">✎</button>' +
+        '<button type="button" class="icon-btn danger' + (pendingDeleteGame === index ? ' confirm' : '') + '" onclick="deleteGame(' + index + ')" title="' +
+          escapeHtml(pendingDeleteGame === index ? t('delGameConfirm') : t('delGame')) + '" aria-label="' +
+          escapeHtml(pendingDeleteGame === index ? t('delGameConfirm') : t('delGame')) + '">🗑</button>';
     }
     div.innerHTML = html;
     list.appendChild(div);
@@ -2727,35 +2876,29 @@ function renderGame(tour) {
   const restEl = document.getElementById('resting-label');
   const resting = [...Array(nPlayers).keys()].filter(i => !onCourt.has(i));
   if (resting.length > 0) {
-    restEl.textContent = t('resting') + ': ' + resting.map(i => tour.players[i]).join(', ');
+    restEl.innerHTML = escapeHtml(t('resting')) + ': ' + resting.map(i =>
+      '<button type="button" class="pname' + (swapSel === i ? ' swap-sel' : '') + '"' +
+      ' aria-pressed="' + (swapSel === i) + '" onclick="tapSwap(' + i + ')">' +
+      escapeHtml(tour.players[i]) + '</button>').join('، '.replace('،', ','));
     restEl.classList.remove('hidden');
   } else {
     restEl.classList.add('hidden');
   }
   renderLeaderboardInto('leaderboard-body', tour);
   renderHistory(tour);
-  // Live-share card: always visible; guests get an explanation + sign-in path
-  // instead of a dead end (sharing needs the cloud).
-  const liveCard = document.getElementById('live-card');
-  liveCard.classList.remove('hidden');
-  const guestRow = document.getElementById('live-guest');
-  if (!session) {
-    guestRow.classList.remove('hidden');
-    document.getElementById('share-live-btn').classList.add('hidden');
-    document.getElementById('live-share').classList.add('hidden');
+  // Live-share card: works for everyone — guests broadcast through the
+  // device write-token channel, no account needed.
+  document.getElementById('live-card').classList.remove('hidden');
+  const shareBtn = document.getElementById('share-live-btn');
+  const shareRow = document.getElementById('live-share');
+  if (tour.isPublic) {
+    shareBtn.classList.add('hidden');
+    shareRow.classList.remove('hidden');
+    document.getElementById('live-wa').href = 'https://wa.me/?text=' +
+      encodeURIComponent(t('liveWaText') + '\n' + publicUrl(tour));
   } else {
-    guestRow.classList.add('hidden');
-    const shareBtn = document.getElementById('share-live-btn');
-    const shareRow = document.getElementById('live-share');
-    if (tour.isPublic) {
-      shareBtn.classList.add('hidden');
-      shareRow.classList.remove('hidden');
-      document.getElementById('live-wa').href = 'https://wa.me/?text=' +
-        encodeURIComponent(t('liveWaText') + '\n' + publicUrl(tour));
-    } else {
-      shareBtn.classList.remove('hidden');
-      shareRow.classList.add('hidden');
-    }
+    shareBtn.classList.remove('hidden');
+    shareRow.classList.add('hidden');
   }
 }
 
@@ -2776,18 +2919,15 @@ function renderPodium(tour) {
   const wa = document.getElementById('wa-link');
   wa.href = 'https://wa.me/?text=' + encodeURIComponent(shareText(tour));
   document.getElementById('share-fallback').classList.add('hidden');
-  // Public-link card: only offer it to signed-in users (needs the cloud).
+  // Public-link card: available to everyone — guests publish via the
+  // device write-token channel.
   const linkCard = document.getElementById('share-link-card');
   const makeBtn = document.getElementById('make-public-btn');
   const live = document.getElementById('public-live');
-  if (!session) {
-    linkCard.classList.add('hidden');
-  } else {
-    linkCard.classList.remove('hidden');
-    makeBtn.disabled = false;
-    if (tour.isPublic) { makeBtn.classList.add('hidden'); live.classList.remove('hidden'); }
-    else { makeBtn.classList.remove('hidden'); live.classList.add('hidden'); }
-  }
+  linkCard.classList.remove('hidden');
+  makeBtn.disabled = false;
+  if (tour.isPublic) { makeBtn.classList.add('hidden'); live.classList.remove('hidden'); }
+  else { makeBtn.classList.remove('hidden'); live.classList.add('hidden'); }
   // Replay the medal entrance on each podium view.
   if (!REDUCE) {
     ['.podium-first .medal', '.podium-rest .p:nth-child(1) .medal', '.podium-rest .p:nth-child(2) .medal']
@@ -2800,7 +2940,7 @@ function renderHome() {
   renderCloud();
   const list = document.getElementById('tournament-list');
   if (db.tournaments.length === 0) {
-    list.innerHTML = '<div class="empty-ball" aria-hidden="true">🎾</div><div class="empty-note">' + t('noTours') + '</div>';
+    list.innerHTML = '<div class="empty-ball" aria-hidden="true">' + BRAND_BALL_SVG + '</div><div class="empty-note">' + t('noTours') + '</div>';
   } else {
     list.innerHTML = '';
     db.tournaments.forEach(tour => {
@@ -3013,6 +3153,7 @@ if (PWA_HOST) {
   });
 }
 
+document.querySelector('#brand-h1 .title-ball').innerHTML = BRAND_BALL_SVG;
 loadDb();
 loadSession();
 // Scope local data to the restored account (claims pre-existing guest data for

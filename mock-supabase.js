@@ -153,6 +153,24 @@ const server = http.createServer((req, res) => {
       }
     }
 
+    // Account-free live publish: create/update an ownerless row keyed by
+    // the device's write token (mirrors publish_live's ON CONFLICT ... WHERE:
+    // wrong token = silent no-op, same as production).
+    if (path === '/rest/v1/rpc/publish_live' && req.method === 'POST') {
+      const { tid, token, tdata } = data || {};
+      if (!tid || !token || String(token).length < 16 || !tdata) return json(res, 400, { message: 'bad request' });
+      const r = rows[tid];
+      if (!r) rows[tid] = { id: tid, user_id: null, data: tdata, is_public: true, write_token: token };
+      else if (r.user_id === null && r.write_token === token) { r.data = tdata; r.is_public = true; }
+      res.writeHead(204, CORS); res.end(); return;
+    }
+    if (path === '/rest/v1/rpc/stop_live' && req.method === 'POST') {
+      const { tid, token } = data || {};
+      const r = rows[tid];
+      if (r && r.user_id === null && r.write_token === token) r.is_public = false;
+      res.writeHead(204, CORS); res.end(); return;
+    }
+
     // Public share read: fetch-by-exact-id, scrubbed of account-linked fields.
     if (path === '/rest/v1/rpc/get_public_tournament' && req.method === 'POST') {
       const tid = (data || {}).tid;

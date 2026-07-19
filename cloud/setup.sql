@@ -41,6 +41,37 @@ $$;
 revoke all on function public.get_public_tournament(text) from public;
 grant execute on function public.get_public_tournament(text) to anon, authenticated;
 
+-- Live sharing WITHOUT an account: the guest device holds a random write
+-- token; rows it publishes have no owner (user_id null) and can only be
+-- updated or unpublished with that same token, through these RPCs. Accounts
+-- never see these rows in their sync (own_all matches auth.uid() = user_id).
+alter table public.tournaments alter column user_id drop not null;
+alter table public.tournaments add column if not exists write_token text;
+
+create or replace function public.publish_live(tid text, token text, tdata jsonb)
+returns void language plpgsql security definer set search_path = public as $$
+begin
+  if tid is null or token is null or length(token) < 16 or tdata is null then
+    raise exception 'bad request';
+  end if;
+  insert into public.tournaments as t (id, user_id, data, is_public, write_token)
+  values (tid, null, tdata, true, token)
+  on conflict (id) do update
+    set data = excluded.data, is_public = true, updated_at = now()
+    where t.user_id is null and t.write_token = excluded.write_token;
+end;
+$$;
+revoke all on function public.publish_live(text, text, jsonb) from public;
+grant execute on function public.publish_live(text, text, jsonb) to anon, authenticated;
+
+create or replace function public.stop_live(tid text, token text)
+returns void language sql security definer set search_path = public as $$
+  update public.tournaments set is_public = false
+  where id = tid and user_id is null and write_token = token;
+$$;
+revoke all on function public.stop_live(text, text) from public;
+grant execute on function public.stop_live(text, text) to anon, authenticated;
+
 -- Self-serve account + data deletion (GDPR / Israeli PPL right to erasure).
 -- Deletes only the caller's own rows and auth user via auth.uid().
 create or replace function public.delete_account() returns void

@@ -25,6 +25,9 @@
   body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;padding:16px}
   .container{max-width:560px;margin:0 auto}
   h1{text-align:center;font-size:1.5rem;margin:8px 0 2px}
+  h1.brand{display:flex;align-items:center;justify-content:center;gap:10px;font-weight:900}
+  h1.brand svg{width:28px;height:28px;flex:0 0 auto}
+  h1.brand .latin{color:var(--accent);font-size:.95rem;font-weight:800;letter-spacing:2px;align-self:flex-end;padding-bottom:4px}
   .subtitle{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:14px}
   .live-badge{display:none;align-items:center;justify-content:center;gap:8px;margin:0 auto 16px;width:max-content;background:#450a0a;color:#fecaca;font-weight:800;font-size:.8rem;padding:6px 14px;border-radius:999px}
   .live-badge.on{display:flex}
@@ -63,7 +66,7 @@
 </head>
 <body>
 <div class="container">
-  <h1>🎾 PadelZit</h1>
+  <h1 class="brand"><svg viewBox="0 0 64 64" aria-hidden="true"><defs><radialGradient id="ballg" cx="36%" cy="30%" r="75%"><stop offset="0%" stop-color="#eef8b0"/><stop offset="55%" stop-color="#c6f23f"/><stop offset="100%" stop-color="#97c40e"/></radialGradient></defs><circle cx="32" cy="32" r="30" fill="url(#ballg)"/><path d="M 10 12 C 26 26, 26 38, 10 52" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/><path d="M 54 12 C 38 26, 38 38, 54 52" fill="none" stroke="#fff" stroke-width="6.5" stroke-linecap="round"/></svg>פאדלז׳יט <span class="latin">PadelZit</span></h1>
   <div class="subtitle" id="subtitle">תוצאות טורניר</div>
   <div class="live-badge" id="live-badge"><span class="live-dot"></span><span id="live-text">שידור חי</span></div>
   <div id="content"><div class="note" id="loading">טוען תוצאות…</div></div>
