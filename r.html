@@ -36,6 +36,8 @@
   .match{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch}
   .match .team{background:var(--card-2);border-radius:12px;padding:12px 8px;text-align:center;font-weight:700;overflow-wrap:anywhere}
   .match .vs{display:flex;align-items:center;justify-content:center;color:var(--muted);font-weight:800}
+  .court-cap{color:var(--accent);font-size:.75rem;font-weight:800;letter-spacing:.5px;margin:10px 0 6px;text-transform:uppercase}
+  .match+ .court-cap,.court-cap:not(:first-of-type){margin-top:14px}
   .resting{color:var(--muted);font-size:.85rem;text-align:center;margin-top:10px}
   .podium-first{text-align:center;padding:10px 0 4px}
   .podium-first .medal{font-size:3rem;line-height:1}
@@ -94,10 +96,17 @@ function renderLive(t){
   let h='';
   if(t.next&&Array.isArray(t.next[0])){
     const nm=i=>esc(t.players[i]);
-    const a=t.next[0].map(nm).join(' + '), b=t.next[1].map(nm).join(' + ');
-    const onCourt=new Set([].concat(t.next[0],t.next[1]));
+    const match=(m,label)=>{
+      const a=m[0].map(nm).join(' + '), b=m[1].map(nm).join(' + ');
+      return (label?'<div class="court-cap">'+label+'</div>':'')+
+        '<div class="match"><div class="team">'+a+'</div><div class="vs">נגד</div><div class="team">'+b+'</div></div>';
+    };
+    const two=t.next2&&Array.isArray(t.next2[0]);
+    const onCourt=new Set([].concat(t.next[0],t.next[1],two?t.next2[0]:[],two?t.next2[1]:[]));
     const resting=[...Array(t.players.length).keys()].filter(i=>!onCourt.has(i)).map(i=>esc(t.players[i]));
-    h+='<div class="card"><h2>▶ משחק נוכחי</h2><div class="match"><div class="team">'+a+'</div><div class="vs">נגד</div><div class="team">'+b+'</div></div>';
+    h+='<div class="card"><h2>▶ '+(two?'משחקים נוכחיים':'משחק נוכחי')+'</h2>';
+    h+=match(t.next,two?'מגרש 1':'');
+    if(two) h+=match(t.next2,'מגרש 2');
     if(resting.length) h+='<div class="resting">😴 נחים: '+resting.join(', ')+'</div>';
     h+='</div>';
   }

@@ -105,6 +105,9 @@
     text-decoration: underline; min-height: 0; width: auto; }
   #guest-note .guest-note-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
+  .court-label { font-size: .8rem; font-weight: 800; color: var(--accent); margin: 10px 0 4px;
+    text-transform: uppercase; letter-spacing: .5px; }
+
   /* Screen entrance */
   .screen-in { animation: screenIn .18s ease-out; }
   @keyframes screenIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
@@ -243,13 +246,7 @@
   .hidden { display: none !important; }
 
   /* Match screen */
-  .round-label {
-    text-align: center;
-    color: var(--muted);
-    font-size: 0.85rem;
-    margin-bottom: 12px;
-    letter-spacing: 1px;
-  }
+  .round-label { font-size: 1.05rem; color: var(--text); font-weight: 800; margin-bottom: 8px; }
   .teams {
     display: grid;
     grid-template-columns: 1fr auto 1fr;
@@ -272,7 +269,7 @@
   @media (prefers-reduced-motion: reduce) {
     .teams.flash .team { animation: none; }
   }
-  .team .players { font-weight: 700; font-size: 0.95rem; line-height: 1.5; overflow-wrap: anywhere; }
+  .team .players { font-weight: 700; font-size: 1.15rem; line-height: 1.5; overflow-wrap: anywhere; }
   .vs {
     display: flex;
     align-items: center;
@@ -288,6 +285,11 @@
     margin-bottom: 6px;
   }
   .score-row input { text-align: center; font-size: 1.6rem; font-weight: 800; margin-bottom: 0; }
+  .stepper { display: flex; align-items: center; gap: 4px; min-width: 0; }
+  .stepper input { flex: 1; min-width: 0; }
+  .stepper .step { flex: 0 0 auto; width: 44px; min-height: 48px; padding: 0;
+    font-size: 1.35rem; font-weight: 800; border-radius: 10px;
+    background: var(--card-2); color: var(--text); }
   .score-row .dash { text-align: center; color: var(--muted); font-weight: 800; }
   .hint { text-align: center; color: var(--muted); font-size: 0.85rem; margin-bottom: 12px; }
   .target-row {
@@ -409,7 +411,7 @@
   .tour-item .tour-sub { color: var(--muted); font-size: 0.8rem; margin-bottom: 10px; }
   .tour-actions { display: flex; gap: 8px; }
   .tour-actions button { margin-top: 0; padding: 10px; font-size: 0.9rem; }
-  .tour-actions .del { flex: 0 0 auto; width: auto; padding: 10px 14px; background: #450a0a; color: #fecaca; }
+  .tour-actions .del { flex: 0 0 auto; width: auto; padding: 10px 14px; background: #450a0a; color: #fecaca;; min-width: 96px; flex: 0 0 auto; }
 
   /* Podium */
   .podium-first {
@@ -436,7 +438,7 @@
   #share-fallback { width: 100%; min-height: 120px; margin-top: 10px; border-radius: 10px; border: 1px solid #334155; background: var(--card-2); color: var(--text); padding: 10px; font-size: 0.85rem; }
 
   /* Player-count chips */
-  .count-row { display: flex; gap: 8px; margin-bottom: 14px; }
+  .count-row { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
   .count-chip {
     width: auto;
     flex: 1;
@@ -450,7 +452,7 @@
     background: linear-gradient(135deg, var(--accent), var(--accent-2));
     color: #06283d;
   }
-  #resting-label { text-align: center; color: var(--muted); font-size: 0.85rem; margin: -4px 0 12px; }
+  #resting-label { text-align: center; color: var(--muted); font-size: .95rem; margin: -4px 0 12px; }
 
   /* Backup / restore */
   .oauth-sep {
@@ -546,7 +548,7 @@
   .me-star { color: var(--gold); margin-inline-start: 4px; }
   .name-label-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
   .name-label-row label { margin-bottom: 0; }
-  .me-toggle { width: auto; padding: 4px 14px; font-size: 0.8rem; font-weight: 800; background: var(--card-2); color: var(--muted); border: 1px solid #334155; border-radius: 999px; min-height: 32px; }
+  .me-toggle { width: auto; padding: 4px 14px; font-size: 0.8rem; font-weight: 800; background: var(--card-2); color: var(--muted); border: 1px solid #334155; border-radius: 999px; min-height: 44px; }
   .me-toggle.sel { background: linear-gradient(135deg, var(--gold), #fde68a); color: #422006; border-color: transparent; }
   .mystats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; text-align: center; }
   .mystats-grid .v { font-size: 1.3rem; font-weight: 800; color: var(--accent); }
@@ -577,10 +579,6 @@
 
   <!-- HOME SCREEN -->
   <div id="home-screen" class="hidden">
-    <div id="install-row" class="hidden">
-      <button type="button" onclick="doInstall()" id="install-btn" class="hidden"></button>
-      <div class="hint" id="install-hint" style="text-align:start"></div>
-    </div>
     <button onclick="gotoSetup()" id="new-tour-btn"></button>
     <div id="guest-note" class="hidden" role="note">
       <span aria-hidden="true">👤</span>
@@ -592,10 +590,16 @@
       <h2 id="tours-title"></h2>
       <div id="tournament-list"></div>
     </div>
+    <div id="install-row" class="hidden">
+      <button type="button" onclick="doInstall()" id="install-btn" class="hidden"></button>
+      <div class="hint" id="install-hint" style="text-align:start"></div>
+    </div>
     <div class="card" id="cloud-card">
       <h2 id="cloud-title"></h2>
       <div id="cloud-logged-out">
         <div class="hint" id="cloud-hint" style="text-align:start"></div>
+        <button type="button" class="secondary" onclick="toggleCloudForm(true)" id="cloud-open-btn"></button>
+        <div id="cloud-form-wrap">
         <label for="cloud-email" id="lcloud-email"></label>
         <input type="email" id="cloud-email" autocomplete="email" inputmode="email" aria-required="true" aria-describedby="cloud-error">
         <label for="cloud-pass" id="lcloud-pass"></label>
@@ -609,6 +613,7 @@
         <!-- Apple sign-in: re-enable once the Apple provider is configured in Supabase
         <button type="button" class="oauth-btn apple" onclick="doOAuth('apple')" id="apple-btn"></button>
         -->
+        </div>
       </div>
     </div>
     <div class="card hidden" id="mystats-card">
@@ -641,7 +646,9 @@
         <div class="count-row" id="format-row"></div>
         <div class="hint" id="fmt-hint" class="hidden"></div>
         <label for="target" id="ltarget"></label>
+        <div class="count-row" id="target-chips"></div>
         <input type="number" id="target" value="32" min="2" max="500" inputmode="numeric" enterkeyhint="go" aria-required="true" aria-describedby="setup-error">
+        <div class="hint" id="target-hint" style="text-align:start"></div>
         <div class="error-msg" id="setup-error" role="alert"></div>
         <div class="hint" id="req-legend" style="text-align:start"></div>
         <button type="submit" id="start-btn"></button>
@@ -658,17 +665,47 @@
         <label for="game-target" id="lgame-target"></label>
         <input type="number" id="game-target" min="2" max="500" inputmode="numeric" onchange="changeTarget()">
       </div>
+      <div class="court-label hidden" id="court1-label"></div>
       <div class="teams" id="teams-box">
         <div class="team"><div class="players" id="teamA-names"></div></div>
         <div class="vs" id="vs-label"></div>
         <div class="team"><div class="players" id="teamB-names"></div></div>
       </div>
-      <div id="resting-label" class="hidden"></div>
       <div class="score-row">
-        <input type="number" id="scoreA" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('A')">
+        <div class="stepper">
+          <button type="button" class="step" onclick="stepScore('A',1)" aria-label="+1">+</button>
+          <input type="number" id="scoreA" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('A')">
+          <button type="button" class="step" onclick="stepScore('A',-1)" aria-label="-1">−</button>
+        </div>
         <div class="dash">—</div>
-        <input type="number" id="scoreB" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('B')">
+        <div class="stepper">
+          <button type="button" class="step" onclick="stepScore('B',1)" aria-label="+1">+</button>
+          <input type="number" id="scoreB" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('B')">
+          <button type="button" class="step" onclick="stepScore('B',-1)" aria-label="-1">−</button>
+        </div>
       </div>
+      <div id="court2-block" class="hidden">
+        <div class="court-label" id="court2-label"></div>
+        <div class="teams" id="teams-box2">
+          <div class="team"><div class="players" id="teamA2-names"></div></div>
+          <div class="vs" id="vs-label2"></div>
+          <div class="team"><div class="players" id="teamB2-names"></div></div>
+        </div>
+        <div class="score-row">
+          <div class="stepper">
+            <button type="button" class="step" onclick="stepScore('A2',1)" aria-label="+1">+</button>
+            <input type="number" id="scoreA2" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('A2')">
+            <button type="button" class="step" onclick="stepScore('A2',-1)" aria-label="-1">−</button>
+          </div>
+          <div class="dash">—</div>
+          <div class="stepper">
+            <button type="button" class="step" onclick="stepScore('B2',1)" aria-label="+1">+</button>
+            <input type="number" id="scoreB2" min="0" inputmode="numeric" placeholder="0" oninput="autoFill('B2')">
+            <button type="button" class="step" onclick="stepScore('B2',-1)" aria-label="-1">−</button>
+          </div>
+        </div>
+      </div>
+      <div id="resting-label" class="hidden"></div>
       <div class="hint" id="sum-hint"></div>
       <div class="error-msg" id="score-error" role="alert"></div>
       <button onclick="saveGame()" id="save-btn"></button>
@@ -678,7 +715,7 @@
       <h2 id="ranking-title"></h2>
       <table>
         <thead>
-          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff">+/-</th><th class="num" id="th-won"></th><th class="num" id="th-games"></th></tr>
+          <tr><th>#</th><th id="th-player"></th><th class="num" id="th-points"></th><th class="num" id="th-diff"><bdi dir="ltr">+/-</bdi></th><th class="num" id="th-won"></th><th class="num" id="th-games"></th></tr>
         </thead>
         <tbody id="leaderboard-body"></tbody>
       </table>
@@ -692,6 +729,10 @@
     <div class="card" id="live-card">
       <h2 id="live-title"></h2>
       <button type="button" onclick="shareLive()" id="share-live-btn"></button>
+      <div id="live-guest" class="hidden">
+        <div class="hint" id="live-guest-hint" style="text-align:start"></div>
+        <button type="button" class="secondary" onclick="goToLogin()" id="live-guest-btn"></button>
+      </div>
       <div id="live-share" class="hidden">
         <div class="hint" id="live-on" style="text-align:start"></div>
         <a class="whatsapp" id="live-wa" target="_blank" rel="noopener noreferrer"></a>
@@ -784,7 +825,7 @@ const store = (() => {
 const STR = {
   he: {
     appTitle: '🎾 פאדלז׳יט',
-    subtitle: 'אמריקנו · 4 שחקנים · הזוגות מתערבבים אחרי כל משחק',
+    subtitle: 'אמריקנו · מקסיקנו · 4–12 שחקנים · הזוגות מתערבבים כל משחק',
     installBtn: '📲 התקן את PadelZit במסך הבית',
     installHintIos: 'להתקנה באייפון: הקישו על כפתור השיתוף בסאפארי ⬆️ ואז "הוסף למסך הבית".',
     installHintGeneric: 'להתקנה כאפליקציה: פתחו את התפריט של הדפדפן (⋮) ובחרו "התקן אפליקציה" / "הוסף למסך הבית". אם פתחתם מוואטסאפ — פתחו קודם בכרום (⋮ ← "פתח בכרום").',
@@ -830,11 +871,11 @@ const STR = {
     continueTour: 'המשך',
     viewPodium: 'תוצאות',
     del: 'מחיקה',
-    delConfirm: 'בטוח? לחצו שוב',
+    delConfirm: 'בטוח למחוק?',
     alltime: '🏅 טבלת האלופים (כל הטורנירים)',
     athPlayer: 'שחקן', athTitles: '🏆', athPoints: 'נקודות', athGames: 'משחקים', athWon: 'ניצחונות',
     setupTitle: 'שמות השחקנים',
-    countLabel: 'מספר שחקנים (4 משחקים בכל רגע, השאר נחים)',
+    countLabel: 'מספר שחקנים (עם 8 ומעלה — שני מגרשים במקביל)',
     resting: '😴 נחים במשחק הזה',
     player: 'שחקן',
     namePh: 'שם',
@@ -848,6 +889,8 @@ const STR = {
     round: 'סבב',
     gameTargetLabel: '🎯 ניקוד למשחק:',
     vs: 'נגד',
+    court1: 'מגרש 1',
+    court2: 'מגרש 2',
     sumHint: 'סכום הנקודות של שתי הקבוצות חייב להיות {n}',
     errEnter: 'נא להזין את תוצאת המשחק (מספרים שלמים).',
     errRange: 'הניקוד חייב להיות בין 0 ל־{n}.',
@@ -858,6 +901,9 @@ const STR = {
     thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'נצ׳', thGames: 'מש׳',
     cloudTitle: '☁️ חשבון ענן',
     cloudHint: 'התחברות שומרת את כל הטורנירים בענן ומסנכרנת אוטומטית בין המכשירים שלך. אפשר להמשיך גם בלי חשבון — הכול יישמר במכשיר.',
+    cloudOpenBtn: 'התחברות / הרשמה',
+    loginCta: 'התחברות / הרשמה',
+    targetHint: 'טיפ: יעד אי־זוגי (למשל 21) מונע תיקו.',
     guestNote: 'לא מחובר/ת. המשחקים נשמרים על המכשיר הזה בלבד.',
     guestNoteLink: 'התחברות לסנכרון',
     cloudEmail: 'אימייל',
@@ -899,6 +945,8 @@ const STR = {
     finishYes: 'כן, להכריז!',
     finishNo: 'עוד לא',
     finishHintMid: 'טיפ: כדאי לסיים אחרי סבב שלם (כל 3 משחקים) — כך כולם שיחקו עם כולם.',
+    finishHintUneven: 'שימו לב: לא כולם שיחקו אותו מספר משחקים.',
+    claimedMe: 'זה אני — התוצאות נזקפות לחשבון שלי',
     home: '🏠 מסך הבית',
     podium: '🎉 תוצאות הטורניר',
     finalTable: 'הטבלה הסופית',
@@ -920,7 +968,7 @@ const STR = {
   },
   en: {
     appTitle: '🎾 PadelZit',
-    subtitle: 'Americano · 4 players · partners shuffle after every game',
+    subtitle: 'Americano · Mexicano · 4–12 players · partners shuffle every game',
     installBtn: '📲 Install PadelZit on your home screen',
     installHintIos: 'To install on iPhone: tap the Share button in Safari ⬆️ then "Add to Home Screen".',
     installHintGeneric: 'To install as an app: open the browser menu (⋮) and choose "Install app" / "Add to Home screen". If you opened this from WhatsApp, open it in Chrome first (⋮ → "Open in Chrome").',
@@ -966,11 +1014,11 @@ const STR = {
     continueTour: 'Continue',
     viewPodium: 'Results',
     del: 'Delete',
-    delConfirm: 'Sure? Tap again',
+    delConfirm: 'Sure?',
     alltime: '🏅 All-time leaderboard (all tournaments)',
     athPlayer: 'Player', athTitles: '🏆', athPoints: 'Points', athGames: 'Games', athWon: 'Won',
     setupTitle: 'Player names',
-    countLabel: 'Number of players (4 on court, the rest rest)',
+    countLabel: 'Number of players (8+ fills two courts in parallel)',
     resting: '😴 Resting this game',
     player: 'Player',
     namePh: 'Name',
@@ -984,6 +1032,8 @@ const STR = {
     round: 'Round',
     gameTargetLabel: '🎯 Points per game:',
     vs: 'VS',
+    court1: 'Court 1',
+    court2: 'Court 2',
     sumHint: 'Scores of both teams must add up to {n}',
     errEnter: 'Enter the score for the game (whole numbers).',
     errRange: 'Scores must be between 0 and {n}.',
@@ -994,6 +1044,9 @@ const STR = {
     thPlayer: 'Player', thPoints: 'Points', thWon: 'W', thGames: 'GP',
     cloudTitle: '☁️ Cloud account',
     cloudHint: 'Signing in saves all tournaments to the cloud and syncs them across your devices. You can keep playing without an account — everything stays on this device.',
+    cloudOpenBtn: 'Sign in / Sign up',
+    loginCta: 'Sign in / Sign up',
+    targetHint: 'Tip: an odd target (e.g. 21) rules out ties.',
     guestNote: 'Not signed in. Games are saved on this device only.',
     guestNoteLink: 'Sign in to sync',
     cloudEmail: 'Email',
@@ -1035,6 +1088,8 @@ const STR = {
     finishYes: 'Yes, crown them!',
     finishNo: 'Not yet',
     finishHintMid: 'Tip: finishing after a full round (every 3 games) means everyone partnered everyone.',
+    finishHintUneven: 'Note: not everyone has played the same number of games.',
+    claimedMe: 'This is me — results count toward my account',
     home: '🏠 Home',
     podium: '🎉 Tournament results',
     finalTable: 'Final table',
@@ -1092,7 +1147,7 @@ function saveDb() {
 // Repairs missing/out-of-range pairing state and recomputes all totals from history.
 function sanitizeTournament(x) {
   if (!x || typeof x !== 'object') return null;
-  if (!Array.isArray(x.players) || x.players.length < 4 || x.players.length > 8 ||
+  if (!Array.isArray(x.players) || x.players.length < 4 || x.players.length > 12 ||
       x.players.some(p => typeof p !== 'string' || !p.trim())) return null;
   const n = x.players.length;
   const target = (Number.isInteger(x.target) && x.target >= 2 && x.target <= 500) ? x.target : 32;
@@ -1143,11 +1198,23 @@ function sanitizeTournament(x) {
     tour.pairingCursor = x.pairingCursor;
   }
   recompute(tour);
-  const nextOk = x.next && Array.isArray(x.next) && x.next.length === 2 &&
-    Array.isArray(x.next[0]) && Array.isArray(x.next[1]) &&
-    x.next[0].length === 2 && x.next[1].length === 2 &&
-    validTeams({ teamA: x.next[0], teamB: x.next[1] });
-  tour.next = nextOk ? [x.next[0].slice(), x.next[1].slice()] : computeNext(tour);
+  const validMatch = m => m && Array.isArray(m) && m.length === 2 &&
+    Array.isArray(m[0]) && Array.isArray(m[1]) &&
+    m[0].length === 2 && m[1].length === 2 &&
+    validTeams({ teamA: m[0], teamB: m[1] });
+  if (validMatch(x.next)) {
+    tour.next = [x.next[0].slice(), x.next[1].slice()];
+    tour.next2 = null;
+    if (validMatch(x.next2)) {
+      // Court 2 must not share players with court 1.
+      const all = new Set([...x.next[0], ...x.next[1], ...x.next2[0], ...x.next2[1]]);
+      if (all.size === 8) tour.next2 = [x.next2[0].slice(), x.next2[1].slice()];
+    }
+    // Older 8-player saves predate two courts — upgrade them to a full round.
+    if (n >= 8 && !tour.next2 && !tour.finished) assignNextRound(tour);
+  } else {
+    assignNextRound(tour);
+  }
   return tour;
 }
 
@@ -1159,7 +1226,7 @@ function loadDb() {
       const parsed = JSON.parse(raw);
       if (parsed && typeof parsed === 'object' && Array.isArray(parsed.tournaments)) {
         db.tournaments = parsed.tournaments.map(sanitizeTournament).filter(Boolean);
-        if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length >= 4 && parsed.lastPlayers.length <= 8) db.lastPlayers = parsed.lastPlayers;
+        if (Array.isArray(parsed.lastPlayers) && parsed.lastPlayers.length >= 4 && parsed.lastPlayers.length <= 12) db.lastPlayers = parsed.lastPlayers;
         if (Number.isInteger(parsed.lastTarget)) db.lastTarget = parsed.lastTarget;
         if (parsed.lastFormat === 'mexicano' || parsed.lastFormat === 'americano') db.lastFormat = parsed.lastFormat;
         if (Array.isArray(parsed.deletedIds)) db.deletedIds = parsed.deletedIds.filter(x => typeof x === 'string');
@@ -1215,9 +1282,10 @@ function newTournamentObj(players, targetPoints, format) {
     history: [],               // {teamA:[i,i], teamB:[i,i], scoreA, scoreB, target}
     pairingOrder: shuffledPairingOrder(),   // used only with exactly 4 players
     pairingCursor: 0,
-    next: null,                // the upcoming pairing [[i,i],[i,i]]
+    next: null,                // court 1 of the upcoming round [[i,i],[i,i]]
+    next2: null,               // court 2 (only when 8+ players play in parallel)
   };
-  tour.next = computeNext(tour);
+  assignNextRound(tour);
   return tour;
 }
 
@@ -1243,43 +1311,75 @@ function partnerCount(tour, x, y) {
     (g.teamB.includes(x) && g.teamB.includes(y))).length;
 }
 
-// Pick the next pairing. With 4 players: the classic 3-pairing cycle.
-// With 5-8 players: the 4 with fewest games play (random among ties),
-// paired to minimize repeat partnerships; the rest sit out this game.
-// Mexicano (from round 2): the 4 who play are paired by standing — 1+4 vs 2+3.
-function computeNext(tour) {
+// Pick the next round: one match, or two parallel matches (courts) when 8+
+// players are available — with 8, everyone plays every round instead of four
+// people benching.
+// 4 players: the classic 3-pairing cycle. 5-7: the 4 with fewest games play
+// (random among ties), paired to minimize repeat partnerships. 8-12: the 8
+// with fewest games fill two courts. Mexicano (from round 2) pairs by
+// standing: court 1 gets ranks 1-4 (1+4 vs 2+3), court 2 gets 5-8 (5+8 vs 6+7).
+function computeRound(tour) {
   const n = tour.players.length;
+  const twoCourts = n >= 8;
   if (tour.format === 'mexicano' && tour.history.length > 0) {
     const order = rankOrder(tour); // best → worst
-    let four;
-    if (n === 4) {
-      four = order.slice();
+    const rankPos = {}; order.forEach((p, i) => rankPos[p] = i);
+    const poolSize = twoCourts ? 8 : 4;
+    let pool;
+    if (n === poolSize) {
+      pool = order.slice();
     } else {
-      // Fewest-games-first for fair rest; tie-broken by rank.
-      const rankPos = {}; order.forEach((p, i) => rankPos[p] = i);
-      const byGames = [...Array(n).keys()].sort((a, b) =>
-        tour.gamesPlayed[a] - tour.gamesPlayed[b] || rankPos[a] - rankPos[b]);
-      four = byGames.slice(0, 4).sort((a, b) => rankPos[a] - rankPos[b]);
+      // Fewest-games-first for fair rest; RANDOM among ties so the current
+      // last place isn't always the one sent to the bench.
+      const byGames = shuffleArr([...Array(n).keys()]).sort((a, b) =>
+        tour.gamesPlayed[a] - tour.gamesPlayed[b]);
+      pool = byGames.slice(0, poolSize).sort((a, b) => rankPos[a] - rankPos[b]);
     }
-    return [[four[0], four[3]], [four[1], four[2]]]; // 1+4 vs 2+3
+    const courts = [];
+    for (let c = 0; c + 3 < pool.length; c += 4) {
+      const four = pool.slice(c, c + 4);
+      courts.push([[four[0], four[3]], [four[1], four[2]]]); // 1+4 vs 2+3
+    }
+    return courts;
   }
   if (n === 4) {
     const p = PAIRINGS[tour.pairingOrder[tour.pairingCursor]];
-    return [p[0].slice(), p[1].slice()];
+    return [[p[0].slice(), p[1].slice()]];
   }
   const idx = shuffleArr([...Array(n).keys()]);
   idx.sort((a, b) => tour.gamesPlayed[a] - tour.gamesPlayed[b]);
-  const four = idx.slice(0, 4);
-  const opts = shuffleArr([
-    [[four[0], four[1]], [four[2], four[3]]],
-    [[four[0], four[2]], [four[1], four[3]]],
-    [[four[0], four[3]], [four[1], four[2]]],
-  ]);
-  opts.sort((p, q) =>
-    (partnerCount(tour, p[0][0], p[0][1]) + partnerCount(tour, p[1][0], p[1][1])) -
-    (partnerCount(tour, q[0][0], q[0][1]) + partnerCount(tour, q[1][0], q[1][1])));
-  return opts[0];
+  if (!twoCourts) {
+    const four = idx.slice(0, 4);
+    const opts = shuffleArr([
+      [[four[0], four[1]], [four[2], four[3]]],
+      [[four[0], four[2]], [four[1], four[3]]],
+      [[four[0], four[3]], [four[1], four[2]]],
+    ]);
+    opts.sort((p, q) =>
+      (partnerCount(tour, p[0][0], p[0][1]) + partnerCount(tour, p[1][0], p[1][1])) -
+      (partnerCount(tour, q[0][0], q[0][1]) + partnerCount(tour, q[1][0], q[1][1])));
+    return [opts[0]];
+  }
+  // Two courts: sample team splits of the 8 and keep the one with the fewest
+  // repeat partnerships.
+  const eight = idx.slice(0, 8);
+  let best = null, bestScore = Infinity;
+  for (let attempt = 0; attempt < 40; attempt++) {
+    const p = shuffleArr(eight.slice());
+    const teams = [[p[0], p[1]], [p[2], p[3]], [p[4], p[5]], [p[6], p[7]]];
+    const score = teams.reduce((s, tm) => s + partnerCount(tour, tm[0], tm[1]), 0);
+    if (score < bestScore) { bestScore = score; best = teams; if (score === 0) break; }
+  }
+  return [[best[0], best[1]], [best[2], best[3]]];
 }
+
+function assignNextRound(tour) {
+  const round = computeRound(tour);
+  tour.next = round[0];
+  tour.next2 = round.length > 1 ? round[1] : null;
+}
+
+function computeNext(tour) { return computeRound(tour)[0]; }
 
 function currentPairing(tour) {
   return tour.next;
@@ -1294,7 +1394,7 @@ function advanceAfterSave(tour) {
       tour.pairingCursor = 0;
     }
   }
-  tour.next = computeNext(tour);
+  assignNextRound(tour);
 }
 
 /* ---------- language ---------- */
@@ -1305,6 +1405,17 @@ function toggleLang() {
   applyLang();
   render();
 }
+
+
+// Real provider marks (inline SVG — the app is self-contained, no CDN).
+const GOOGLE_G_SVG = '<svg class="g" width="18" height="18" viewBox="0 0 48 48" aria-hidden="true">' +
+  '<path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"/>' +
+  '<path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"/>' +
+  '<path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"/>' +
+  '<path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"/></svg>';
+const FACEBOOK_F_SVG = '<svg class="g" width="18" height="18" viewBox="0 0 24 24" aria-hidden="true">' +
+  '<circle cx="12" cy="12" r="12" fill="#fff"/>' +
+  '<path fill="#1877F2" d="M12 0C5.37 0 0 5.37 0 12c0 5.99 4.39 10.95 10.13 11.85v-8.38H7.08V12h3.05V9.36c0-3.01 1.79-4.67 4.53-4.67 1.31 0 2.69.23 2.69.23v2.95h-1.52c-1.49 0-1.96.93-1.96 1.88V12h3.33l-.53 3.47h-2.8v8.38C19.61 22.95 24 17.99 24 12c0-6.63-5.37-12-12-12z"/></svg>';
 
 function applyLang() {
   document.documentElement.lang = STR[lang].lang;
@@ -1329,6 +1440,9 @@ function applyLang() {
   set('setup-back-btn', 'back');
   set('lgame-target', 'gameTargetLabel');
   set('vs-label', 'vs');
+  set('vs-label2', 'vs');
+  set('court1-label', 'court1');
+  set('court2-label', 'court2');
   set('save-btn', 'saveGame');
   set('ranking-title', 'ranking');
   set('th-player', 'thPlayer'); set('th-points', 'thPoints'); set('th-won', 'thWon'); set('th-games', 'thGames');
@@ -1353,8 +1467,8 @@ function applyLang() {
   set('cloud-login-btn', 'cloudLogin');
   set('cloud-signup-btn', 'cloudSignup');
   set('oauth-or', 'cloudOr');
-  document.getElementById('google-btn').innerHTML = '<span class="g">🔵</span>' + escapeHtml(t('googleBtn'));
-  document.getElementById('facebook-btn').innerHTML = '<span class="g">📘</span>' + escapeHtml(t('facebookBtn'));
+  document.getElementById('google-btn').innerHTML = GOOGLE_G_SVG + escapeHtml(t('googleBtn'));
+  document.getElementById('facebook-btn').innerHTML = FACEBOOK_F_SVG + escapeHtml(t('facebookBtn'));
   set('menu-sync', 'cloudSyncBtn');
   set('guest-note-text', 'guestNote');
   set('guest-note-link', 'guestNoteLink');
@@ -1373,6 +1487,10 @@ function applyLang() {
   set('live-on', 'liveOn');
   set('live-wa', 'waShare');
   set('live-copy', 'copyLink');
+  set('cloud-open-btn', 'cloudOpenBtn');
+  set('live-guest-hint', 'shareLiveNeedsLogin');
+  set('live-guest-btn', 'loginCta');
+  set('target-hint', 'targetHint');
   set('live-stop', 'liveStop');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
 }
@@ -1490,7 +1608,7 @@ function selectMe(i) {
 function renderSetup() {
   const row = document.getElementById('count-row');
   row.innerHTML = '';
-  for (let n = 4; n <= 8; n++) {
+  for (let n = 4; n <= 12; n++) {
     const b = document.createElement('button');
     b.type = 'button';
     b.className = 'count-chip' + (n === setupCount ? ' sel' : '');
@@ -1509,6 +1627,17 @@ function renderSetup() {
     fmtRow.appendChild(b);
   });
   document.getElementById('fmt-hint').classList.toggle('hidden', setupFormat !== 'mexicano');
+  const tgtRow = document.getElementById('target-chips');
+  tgtRow.innerHTML = '';
+  [16, 21, 24, 32].forEach(v => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    const cur = parseScore(document.getElementById('target').value);
+    b.className = 'count-chip' + (cur === v ? ' sel' : '');
+    b.textContent = v;
+    b.onclick = () => { document.getElementById('target').value = v; renderSetup(); };
+    tgtRow.appendChild(b);
+  });
   const fields = document.getElementById('name-fields');
   const prev = pendingNames !== null
     ? pendingNames
@@ -1621,15 +1750,30 @@ function autoFillPair(srcInput, dstInput, tgt) {
 
 function autoFill(side) {
   const tour = current(); if (!tour) return;
-  const a = document.getElementById('scoreA');
-  const b = document.getElementById('scoreB');
-  autoFillPair(side === 'A' ? a : b, side === 'A' ? b : a, tour.target);
+  const suffix = side.length > 1 ? side.slice(1) : '';
+  const a = document.getElementById('scoreA' + suffix);
+  const b = document.getElementById('scoreB' + suffix);
+  const src = side[0] === 'A' ? a : b;
+  autoFillPair(src, src === a ? b : a, tour.target);
   document.getElementById('score-error').textContent = '';
 }
 
+// One-thumb scoring: bump a score without opening the keyboard.
+function stepScore(side, d) {
+  const tour = current(); if (!tour) return;
+  const el = document.getElementById('score' + side);
+  const cur = parseScore(el.value);
+  el.value = Math.min(tour.target, Math.max(0, (isNaN(cur) ? (d > 0 ? -1 : 1) : cur) + d));
+  autoFill(side);
+  haptic(5);
+}
+
 function validScores(scoreA, scoreB, tgt) {
+  // Range first: typing 40 when the target is 32 leaves the other side
+  // unfilled (autoFill skips), and "enter the score" would mislead.
+  const outOfRange = v => !isNaN(v) && (v < 0 || v > tgt);
+  if (outOfRange(scoreA) || outOfRange(scoreB)) return 'errRange';
   if (isNaN(scoreA) || isNaN(scoreB)) return 'errEnter';
-  if (scoreA < 0 || scoreB < 0 || scoreA > tgt || scoreB > tgt) return 'errRange';
   if (scoreA + scoreB !== tgt) return 'errSum';
   return null;
 }
@@ -1681,19 +1825,33 @@ function saveGame() {
   const err = document.getElementById('score-error');
   const errKey = validScores(scoreA, scoreB, tour.target);
   if (errKey) { err.textContent = t(errKey, tour.target); return; }
+  // Court 2 (8+ players): both results are entered, then saved as one round.
+  let scoreA2 = null, scoreB2 = null;
+  if (tour.next2) {
+    scoreA2 = parseScore(document.getElementById('scoreA2').value);
+    scoreB2 = parseScore(document.getElementById('scoreB2').value);
+    const errKey2 = validScores(scoreA2, scoreB2, tour.target);
+    if (errKey2) { err.textContent = t('court2') + ': ' + t(errKey2, tour.target); return; }
+  }
   err.textContent = '';
 
   const [teamA, teamB] = currentPairing(tour);
   const game = { teamA: [...teamA], teamB: [...teamB], scoreA, scoreB, target: tour.target };
   applyGame(tour, game);
   tour.history.push(game);
+  if (tour.next2) {
+    const game2 = { teamA: [...tour.next2[0]], teamB: [...tour.next2[1]], scoreA: scoreA2, scoreB: scoreB2, target: tour.target };
+    applyGame(tour, game2);
+    tour.history.push(game2);
+  }
   advanceAfterSave(tour);
   lastSaveAt = Date.now();
   touch(tour);
   saveDb();
 
-  document.getElementById('scoreA').value = '';
-  document.getElementById('scoreB').value = '';
+  ['scoreA', 'scoreB', 'scoreA2', 'scoreB2'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.value = '';
+  });
   render();
   showToast(t('savedToast', tour.history.length));
   announce(t('savedToast', tour.history.length));
@@ -1737,6 +1895,9 @@ function saveEdit(index) {
   tour.history[index].scoreA = scoreA;
   tour.history[index].scoreB = scoreB;
   recompute(tour);
+  // Mexicano pairs the next game by standing — an edit can change the standing,
+  // so the announced matchup must follow.
+  if (tour.format === 'mexicano' && !tour.finished) assignNextRound(tour);
   editingIndex = -1;
   touch(tour);
   saveDb();
@@ -1750,7 +1911,15 @@ function finishAsk() {
   document.getElementById('finish-btn').classList.add('hidden');
   document.getElementById('finish-confirm').classList.remove('hidden');
   const q = document.getElementById('finish-question');
-  q.textContent = t('finishQ') + (tour.history.length % 3 !== 0 ? ' ' + t('finishHintMid') : '');
+  // "Finish after a full cycle" only makes sense for 4-player Americano
+  // (3 pairings per cycle). Elsewhere, warn only when games played are uneven.
+  let hint = '';
+  if (tour.format !== 'mexicano' && tour.players.length === 4) {
+    if (tour.history.length % 3 !== 0) hint = ' ' + t('finishHintMid');
+  } else if (Math.max(...tour.gamesPlayed) - Math.min(...tour.gamesPlayed) > 0) {
+    hint = ' ' + t('finishHintUneven');
+  }
+  q.textContent = t('finishQ') + hint;
 }
 
 function finishCancel() {
@@ -1786,7 +1955,10 @@ function rematch() {
   const tour = current(); if (!tour) return;
   const players = tour.players.slice();
   const target = tour.target;
-  const fresh = newTournamentObj(players, target);
+  // Keep the evening's setup: same format, and the organizer stays "me".
+  const fresh = newTournamentObj(players, target, tour.format);
+  if (tour.meIndex !== null && tour.meIndex !== undefined) fresh.meIndex = tour.meIndex;
+  if (tour.claims && Object.keys(tour.claims).length) fresh.claims = Object.assign({}, tour.claims);
   db.tournaments.unshift(fresh);
   db.lastPlayers = players;
   db.lastTarget = target;
@@ -1838,7 +2010,10 @@ function shareText(tour) {
   });
   lines.push('');
   lines.push(dirMark + t('shareGames', tour.history.length) + ' · ' + t('shareTarget', tour.target));
-  if (tour.isPublic) { lines.push(''); lines.push(publicUrl(tour)); }
+  // Always close with a link: the live link when shared, the app otherwise —
+  // every shared table doubles as an invitation.
+  lines.push('');
+  lines.push(tour.isPublic ? publicUrl(tour) : appUrl());
   return lines.join('\n');
 }
 
@@ -1918,6 +2093,13 @@ function reconcileOwner() {
     // synced it still lives safely in its real owner's cloud.
     const keep = db.tournaments.filter(tr => tr.guestMade === true);
     const dropped = keep.length !== db.tournaments.length;
+    // A guest who tapped "me" and then signed up gets the attribution they
+    // expected: carry the local marker into an account claim.
+    keep.forEach(tr => {
+      if (Number.isInteger(tr.meIndex) && !(tr.claims && Object.keys(tr.claims).length)) {
+        tr.claims = { [uid]: tr.meIndex };
+      }
+    });
     db.tournaments = keep;
     if (dropped) {
       db.deletedIds = [];
@@ -2178,7 +2360,27 @@ function scheduleCloudPush() {
   pushTimer = setTimeout(() => { syncNow(false); }, 1500);
 }
 
+// Collapsed by default once the user already has tournaments (returning
+// organizer mid-flow); expanded on a fresh device where signing up is primary.
+let cloudFormOpen = null; // null = automatic
+function toggleCloudForm(open) {
+  cloudFormOpen = open;
+  renderCloud();
+  if (open) {
+    const email = document.getElementById('cloud-email');
+    if (email) email.focus({ preventScroll: false });
+  }
+}
+
+function goToLogin() {
+  view = 'home';
+  cloudFormOpen = true;
+  render();
+  scrollToCloud();
+}
+
 function scrollToCloud() {
+  if (cloudFormOpen !== true) { cloudFormOpen = true; renderCloud(); }
   const card = document.getElementById('cloud-card');
   if (card) {
     card.scrollIntoView({ behavior: REDUCE ? 'auto' : 'smooth', block: 'center' });
@@ -2214,11 +2416,18 @@ function renderCloud() {
   const menu = document.getElementById('user-menu');
   const guest = document.getElementById('guest-note');
   if (!session) {
-    // Signed out: show the full cloud card so people can log in; hide the chip.
+    // Signed out: show the cloud card so people can log in; hide the chip.
     if (card) card.classList.remove('hidden');
     if (guest) guest.classList.remove('hidden');
     chip.classList.add('hidden');
     menu.classList.add('hidden');
+    // Keep the home screen light: collapse the login form behind one button
+    // when the user already has tournaments to get back to.
+    const open = cloudFormOpen !== null ? cloudFormOpen : db.tournaments.length === 0;
+    const wrap = document.getElementById('cloud-form-wrap');
+    const openBtn = document.getElementById('cloud-open-btn');
+    if (wrap) wrap.classList.toggle('hidden', !open);
+    if (openBtn) openBtn.classList.toggle('hidden', open);
     return;
   }
   // Signed in: replace the whole card with a compact user chip in the top bar.
@@ -2275,9 +2484,17 @@ async function deleteAccountAsk() {
 
 /* ---------- public results link ---------- */
 
+function appUrl() {
+  // file:// / sandboxed frames would produce useless links — use the canonical
+  // hosted address there instead.
+  if (location.protocol === 'http:' || location.protocol === 'https:') {
+    return location.origin + location.pathname.replace(/[^/]*$/, '');
+  }
+  return 'https://azmaveze.github.io/PadelZit/';
+}
+
 function publicUrl(tour) {
-  const base = location.origin + location.pathname.replace(/[^/]*$/, '');
-  return base + 'r.html?t=' + encodeURIComponent(tour.id);
+  return appUrl() + 'r.html?t=' + encodeURIComponent(tour.id);
 }
 
 async function makeTournamentPublic(tour) {
@@ -2412,7 +2629,7 @@ function renderLeaderboardInto(tbodyId, tour) {
     const tr = document.createElement('tr');
     tr.setAttribute('data-player', tour.players[i]);
     tr.innerHTML =
-      '<td><span class="rank-badge rank-' + rank + '">' + rank + '</span></td>' +
+      '<td><span class="rank-badge' + (tour.history.length ? ' rank-' + rank : '') + '">' + rank + '</span></td>' +
       '<td>' + nameCell + '</td>' +
       '<td class="num pts">' + (prevPts != null ? prevPts : tour.points[i]) + '</td>' +
       '<td class="num diff ' + (d > 0 ? 'pos' : d < 0 ? 'neg' : '') + '"><bdi>' + (d > 0 ? '+' : '') + d + '</bdi></td>' +
@@ -2467,7 +2684,7 @@ function renderHistory(tour) {
     } else {
       html +=
         '<span class="history-score">' + g.scoreA + '–' + g.scoreB + '</span>' +
-        (gTarget !== tour.target ? '<span class="history-target">🎯' + gTarget + '</span>' : '') +
+        (gTarget !== tour.target ? '<span class="history-target"><bdi dir="ltr">🎯 ' + gTarget + '</bdi></span>' : '') +
         '<button type="button" class="icon-btn" onclick="startEdit(' + index + ')" title="' + escapeHtml(t('editTitle')) + '" aria-label="' + escapeHtml(t('editTitle')) + '">✎</button>';
     }
     div.innerHTML = html;
@@ -2478,7 +2695,7 @@ function renderHistory(tour) {
 function renderGame(tour) {
   const n = tour.history.length;
   const nPlayers = tour.players.length;
-  let label = t('game') + ' ' + (n + 1);
+  let label = t('game') + ' ' + (tour.next2 ? (n + 1) + '–' + (n + 2) : (n + 1));
   if (tour.format === 'mexicano') {
     label += ' · ' + t('fmtLabelMex');
   } else if (nPlayers === 4) {
@@ -2494,8 +2711,20 @@ function renderGame(tour) {
   document.getElementById('teamB-names').innerHTML = teamLabel(tour, teamB);
   document.getElementById('scoreA').setAttribute('aria-label', teamLabelInline(tour, teamA));
   document.getElementById('scoreB').setAttribute('aria-label', teamLabelInline(tour, teamB));
-  const restEl = document.getElementById('resting-label');
+  // Court 2 (8+ players): show the parallel match with its own score inputs.
+  const court2 = document.getElementById('court2-block');
+  document.getElementById('court1-label').classList.toggle('hidden', !tour.next2);
+  court2.classList.toggle('hidden', !tour.next2);
   const onCourt = new Set([...teamA, ...teamB]);
+  if (tour.next2) {
+    const [teamA2, teamB2] = tour.next2;
+    document.getElementById('teamA2-names').innerHTML = teamLabel(tour, teamA2);
+    document.getElementById('teamB2-names').innerHTML = teamLabel(tour, teamB2);
+    document.getElementById('scoreA2').setAttribute('aria-label', t('court2') + ' — ' + teamLabelInline(tour, teamA2));
+    document.getElementById('scoreB2').setAttribute('aria-label', t('court2') + ' — ' + teamLabelInline(tour, teamB2));
+    teamA2.forEach(i => onCourt.add(i)); teamB2.forEach(i => onCourt.add(i));
+  }
+  const restEl = document.getElementById('resting-label');
   const resting = [...Array(nPlayers).keys()].filter(i => !onCourt.has(i));
   if (resting.length > 0) {
     restEl.textContent = t('resting') + ': ' + resting.map(i => tour.players[i]).join(', ');
@@ -2505,12 +2734,17 @@ function renderGame(tour) {
   }
   renderLeaderboardInto('leaderboard-body', tour);
   renderHistory(tour);
-  // Live-share card: only for signed-in organizers.
+  // Live-share card: always visible; guests get an explanation + sign-in path
+  // instead of a dead end (sharing needs the cloud).
   const liveCard = document.getElementById('live-card');
+  liveCard.classList.remove('hidden');
+  const guestRow = document.getElementById('live-guest');
   if (!session) {
-    liveCard.classList.add('hidden');
+    guestRow.classList.remove('hidden');
+    document.getElementById('share-live-btn').classList.add('hidden');
+    document.getElementById('live-share').classList.add('hidden');
   } else {
-    liveCard.classList.remove('hidden');
+    guestRow.classList.add('hidden');
     const shareBtn = document.getElementById('share-live-btn');
     const shareRow = document.getElementById('live-share');
     if (tour.isPublic) {

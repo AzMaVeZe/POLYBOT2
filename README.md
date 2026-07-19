@@ -1,11 +1,11 @@
 # 🎾 פאדלז׳יט — PadelZit
 
-A score-keeping app for padel Americano tournaments with 4–8 players. Hebrew (RTL) by default, with a one-tap English toggle. No signup needed — open and play.
+A score-keeping app for padel Americano/Mexicano tournaments with 4–12 players (two parallel courts from 8 players up). Hebrew (RTL) by default, with a one-tap English toggle. No signup needed — open and play.
 
 ## Features
 
 - **Multi-tournament home screen** — start a new tournament, continue a live one, or revisit finished ones. Player names are remembered between tournaments.
-- **4–8 players, shuffled pairs** — with more than 4 players, the 4 with the fewest games play each game (partners chosen to minimize repeats) and the rest rest, so playing time stays even.
+- **4–12 players, shuffled pairs** — with 5-7 players, the 4 with the fewest games play each game (partners chosen to minimize repeats) and the rest rest; from 8 players up, each round fills **two parallel courts** (8 play, the rest rotate in), so playing time stays even and nobody benches half the evening.
 - **With exactly 4 players** — with 4 players there are 3 possible team combinations; the app cycles through all of them in random order before reshuffling (never repeating the same pairing twice in a row), so everyone partners with everyone. The round/cycle position is shown ("Game 4 · Round 2 (1/3)").
 - **Games to a configurable total** (default 32 points) — type one team's score and the other fills in automatically. The 🎯 target can be changed mid-tournament; each game remembers the target it was played to.
 - **Live ranking** — points, point differential (+/−) and wins per player; ties broken by wins, then differential.

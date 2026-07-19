@@ -17,6 +17,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.goto('http://localhost:8000/index.html');
 
   // ---- User A signs up and creates a tournament ----
+  if (await page.isVisible('#cloud-open-btn')) await page.click('#cloud-open-btn');
   await page.fill('#cloud-email', 'ariel@test.com');
   await page.fill('#cloud-pass', 'secret123');
   await page.click('#cloud-signup-btn');
@@ -50,6 +51,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   console.log('Sign-out wipes local tournaments from the device: OK');
 
   // ---- User B (new account) signs up on the SAME device ----
+  if (await page.isVisible('#cloud-open-btn')) await page.click('#cloud-open-btn');
   await page.fill('#cloud-email', 'friend@test.com');
   await page.fill('#cloud-pass', 'secret456');
   await page.click('#cloud-signup-btn');
@@ -67,6 +69,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
 
   // ---- A logs back in → their data returns from the cloud ----
   await page.click('#user-chip'); await sleep(150); await page.click('#menu-logout'); await sleep(400);
+  if (await page.isVisible('#cloud-open-btn')) await page.click('#cloud-open-btn');
   await page.fill('#cloud-email', 'ariel@test.com');
   await page.fill('#cloud-pass', 'secret123');
   await page.click('#cloud-login-btn');
@@ -88,6 +91,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     });
     const p2 = await c2.newPage();
     await p2.goto('http://localhost:8000/index.html');
+    if (await p2.isVisible('#cloud-open-btn')) await p2.click('#cloud-open-btn');
     await p2.fill('#cloud-email', 'charlie@test.com');
     await p2.fill('#cloud-pass', 'secret789');
     await p2.click('#cloud-signup-btn');
@@ -116,6 +120,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await sleep(400);
     let n = await p3.$$eval('#tournament-list .tour-item', e => e.length);
     if (n !== 1) throw new Error('legacy seed should be visible to the guest, got ' + n);
+    if (await p3.isVisible('#cloud-open-btn')) await p3.click('#cloud-open-btn');
     await p3.fill('#cloud-email', 'dana@test.com');
     await p3.fill('#cloud-pass', 'secret000');
     await p3.click('#cloud-signup-btn');
@@ -141,6 +146,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     await p4.fill('#scoreA', '18'); await p4.click('#save-btn');
     await sleep(400);
     await p4.click('#game-home-btn');
+    if (await p4.isVisible('#cloud-open-btn')) await p4.click('#cloud-open-btn');
     await p4.fill('#cloud-email', 'eyal@test.com');
     await p4.fill('#cloud-pass', 'secret111');
     await p4.click('#cloud-signup-btn');
