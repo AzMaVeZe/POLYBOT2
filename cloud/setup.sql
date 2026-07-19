@@ -25,15 +25,21 @@ create policy own_all on public.tournaments
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- Anyone with the share link can read a row the owner marked public — powers
--- the read-only public results page (r.html), which always uses the anon key.
--- Deliberately NOT granted to `authenticated`: the app's sync reads with the
--- user's token, and public rows must never mix into another account's pull.
+-- Public share links (r.html) read through a fetch-by-exact-id RPC instead of
+-- a SELECT policy. A `using (is_public)` policy would let anyone LIST every
+-- public tournament of every user with one anonymous request; the RPC requires
+-- knowing the exact id (the link token) and returns a single scrubbed row
+-- (claims/meIndex — account-linked fields — are stripped server-side).
 drop policy if exists public_read on public.tournaments;
-create policy public_read on public.tournaments
-  for select
-  to anon
-  using (is_public = true);
+create or replace function public.get_public_tournament(tid text)
+returns jsonb
+language sql stable security definer set search_path = public as $$
+  select (data - 'claims') - 'meIndex'
+  from public.tournaments
+  where id = tid and is_public = true
+$$;
+revoke all on function public.get_public_tournament(text) from public;
+grant execute on function public.get_public_tournament(text) to anon, authenticated;
 
 -- Self-serve account + data deletion (GDPR / Israeli PPL right to erasure).
 -- Deletes only the caller's own rows and auth user via auth.uid().

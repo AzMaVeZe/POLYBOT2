@@ -116,11 +116,9 @@ const server = http.createServer((req, res) => {
       const id = idFilter ? decodeURIComponent(idFilter.replace(/^eq\./, '')) : null;
 
       if (req.method === 'GET') {
-        // Anon (no JWT): only rows marked public — powers r.html.
-        if (!uid) {
-          const r = id && rows[id];
-          return json(res, 200, (r && r.is_public) ? [{ id: r.id, data: r.data }] : []);
-        }
+        // Anon (no JWT): NO direct row access at all — the public share path is
+        // the get_public_tournament RPC only (mirrors the fixed RLS setup).
+        if (!uid) return json(res, 200, []);
         // Authenticated: RLS visibility is own rows + (historically) public rows.
         // Mirror the WORST-CASE production policy so tests catch pulls that
         // forget to filter by user_id: visible = own OR is_public.
@@ -153,6 +151,16 @@ const server = http.createServer((req, res) => {
         if (rows[id] && rows[id].user_id === uid) delete rows[id];
         res.writeHead(204, CORS); res.end(); return;
       }
+    }
+
+    // Public share read: fetch-by-exact-id, scrubbed of account-linked fields.
+    if (path === '/rest/v1/rpc/get_public_tournament' && req.method === 'POST') {
+      const tid = (data || {}).tid;
+      const r = tid && rows[tid];
+      if (!(r && r.is_public)) return json(res, 200, null);
+      const scrubbed = Object.assign({}, r.data);
+      delete scrubbed.claims; delete scrubbed.meIndex;
+      return json(res, 200, scrubbed);
     }
 
     // debug endpoint for tests

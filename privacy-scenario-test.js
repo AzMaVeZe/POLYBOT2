@@ -97,27 +97,34 @@ const MOCK = 'http://localhost:9021';
   console.log('[2] Signed-in account B: sees only its own saved games, never A’s: OK');
 
   // ---- Check 3: ONLY the exact share link exposes the shared tournament (read-only) ----
-  // r.html reads with the anon key + tournament id — simulate exactly that request.
-  const anonGet = async id => {
-    const res = await fetch(MOCK + '/rest/v1/tournaments?id=eq.' + encodeURIComponent(id) + '&select=data', { headers: { apikey: 'k' } });
+  // r.html reads via the fetch-by-exact-id RPC with the anon key — simulate that.
+  const anonRpc = async id => {
+    const res = await fetch(MOCK + '/rest/v1/rpc/get_public_tournament', {
+      method: 'POST', headers: { apikey: 'k', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ tid: id }),
+    });
     return res.json();
   };
-  const viaLink = await anonGet(sharedId);
-  if (!viaLink.length || !viaLink[0].data || !viaLink[0].data.players.includes('Alef')) {
+  const viaLink = await anonRpc(sharedId);
+  if (!viaLink || !viaLink.players || !viaLink.players.includes('Alef')) {
     throw new Error('the share link does NOT show the shared tournament (it should)');
   }
-  console.log('[3] Someone WITH the share link sees the shared tournament (read-only): OK');
+  if ('claims' in viaLink || 'meIndex' in viaLink) {
+    throw new Error('public payload leaks account-linked fields (claims/meIndex)');
+  }
+  console.log('[3] Someone WITH the share link sees the shared tournament (read-only, scrubbed): OK');
 
   // ---- Check 4: without a link there is no way in ----
-  const priv = await anonGet(privateId);
-  if (priv.length !== 0) throw new Error('UNSHARED tournament is readable via a guessed link!');
-  const wrong = await anonGet('T-guess-123');
-  if (wrong.length !== 0) throw new Error('nonexistent id returned data?!');
-  // Listing without an id must expose nothing to anon either.
+  const priv = await anonRpc(privateId);
+  if (priv !== null) throw new Error('UNSHARED tournament is readable via a guessed link!');
+  const wrong = await anonRpc('T-guess-123');
+  if (wrong !== null) throw new Error('nonexistent id returned data?!');
+  // Anonymous REST reads (listing or by id) must expose nothing at all.
   const listAll = await (await fetch(MOCK + '/rest/v1/tournaments?select=id,data', { headers: { apikey: 'k' } })).json();
-  const names = JSON.stringify(listAll);
-  if (/Hey|Vav/.test(names)) throw new Error('anon listing exposes the private tournament');
-  console.log('[4] Unshared tournament: not readable by link-guessing or listing: OK');
+  if (listAll.length !== 0) throw new Error('anon REST listing returned ' + listAll.length + ' rows (should be 0)');
+  const byId = await (await fetch(MOCK + '/rest/v1/tournaments?id=eq.' + encodeURIComponent(sharedId) + '&select=data', { headers: { apikey: 'k' } })).json();
+  if (byId.length !== 0) throw new Error('anon REST by-id read returned data (should be RPC-only)');
+  console.log('[4] No anonymous listing; unshared tournament unreachable even by guessed link: OK');
 
   await ctxA.close(); await ctxAnon.close(); await ctxB.close();
   console.log('ALL PRIVACY-SCENARIO TESTS PASSED');

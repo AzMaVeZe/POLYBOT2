@@ -126,13 +126,29 @@ function render(t){
   else renderLive(t);
 }
 
+// Fetch one shared tournament by its exact id via the scrubbed RPC. Falls back
+// to the legacy REST read if the RPC isn't installed yet (older cloud setups).
+let rpcMissing=false;
+async function fetchShared(id){
+  if(!rpcMissing){
+    const res=await fetch(SB+'/rest/v1/rpc/get_public_tournament',{
+      method:'POST',headers:{apikey:KEY,'Content-Type':'application/json'},
+      body:JSON.stringify({tid:id})});
+    if(res.ok) return res.json();          // jsonb → tournament object or null
+    if(res.status===404) rpcMissing=true;  // function not installed — use fallback
+    else throw new Error('http');
+  }
+  const res=await fetch(SB+'/rest/v1/tournaments?id=eq.'+encodeURIComponent(id)+'&select=data',{headers:{apikey:KEY}});
+  if(!res.ok) throw new Error('http');
+  const rows=await res.json();
+  return (rows.length&&rows[0].data)?rows[0].data:null;
+}
+
 async function poll(id){
   try{
-    const res=await fetch(SB+'/rest/v1/tournaments?id=eq.'+encodeURIComponent(id)+'&select=data',{headers:{apikey:KEY}});
-    if(!res.ok) throw new Error('http');
-    const rows=await res.json();
-    if(!rows.length||!rows[0].data){document.getElementById('content').innerHTML='<div class="note">התוצאות לא נמצאו או שאינן ציבוריות.</div>';if(timer){clearInterval(timer);timer=null;}return;}
-    render(rows[0].data);
+    const data=await fetchShared(id);
+    if(!data){document.getElementById('content').innerHTML='<div class="note">התוצאות לא נמצאו או שאינן ציבוריות.</div>';if(timer){clearInterval(timer);timer=null;}return;}
+    render(data);
   }catch(e){ /* keep last render; try again next tick */ }
 }
 

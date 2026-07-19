@@ -696,6 +696,7 @@
         <div class="hint" id="live-on" style="text-align:start"></div>
         <a class="whatsapp" id="live-wa" target="_blank" rel="noopener noreferrer"></a>
         <button type="button" class="secondary" onclick="copyPublicLink()" id="live-copy"></button>
+        <button type="button" class="secondary danger" onclick="stopSharing()" id="live-stop"></button>
       </div>
     </div>
     <button onclick="finishAsk()" class="secondary" id="finish-btn"></button>
@@ -811,6 +812,8 @@ const STR = {
     makePublic: 'יצירת קישור ציבורי לשיתוף',
     publicOn: '✓ הקישור פעיל — כל מי שיפתח אותו יראה את התוצאות',
     copyLink: 'העתקת הקישור',
+    liveStop: 'עצירת השידור (ביטול שיתוף)',
+    shareStopped: 'השיתוף בוטל — הקישור כבר לא פעיל',
     linkCopied: 'הקישור הועתק ✓',
     publicErr: 'יצירת הקישור נכשלה. נסו שוב.',
     installedToast: 'PadelZit הותקנה ✓',
@@ -945,6 +948,8 @@ const STR = {
     makePublic: 'Create a public share link',
     publicOn: '✓ Link is live — anyone who opens it sees the results',
     copyLink: 'Copy link',
+    liveStop: 'Stop sharing',
+    shareStopped: 'Sharing stopped — the link no longer works',
     linkCopied: 'Link copied ✓',
     publicErr: 'Creating the link failed. Try again.',
     installedToast: 'PadelZit installed ✓',
@@ -1112,7 +1117,10 @@ function sanitizeTournament(x) {
   if (x.claims && typeof x.claims === 'object') {
     Object.keys(x.claims).forEach(k => {
       const v = x.claims[k];
-      if (typeof k === 'string' && k.length <= 254 && Number.isInteger(v) && v >= 0 && v < n) tour.claims[k] = v;
+      // Keys are opaque account ids. Reject email-shaped keys outright — older
+      // versions keyed claims by email, and that must never sync or publish again.
+      if (typeof k === 'string' && k.length <= 254 && k.indexOf('@') === -1 &&
+          Number.isInteger(v) && v >= 0 && v < n) tour.claims[k] = v;
     });
   }
   const validTeams = g => {
@@ -1176,10 +1184,19 @@ function loadDb() {
   } catch (e) { /* ignore broken legacy state */ }
 }
 
+// ~80 bits of CSPRNG entropy for tournament ids — the id doubles as the public
+// share-link token, so it must not be guessable (Math.random is not enough).
+function randomIdSuffix() {
+  try {
+    const b = crypto.getRandomValues(new Uint8Array(10));
+    return Array.from(b, x => x.toString(16).padStart(2, '0')).join('');
+  } catch (e) { return String(Date.now() % 1e6) + Math.floor(Math.random() * 1e9); }
+}
+
 function newTournamentObj(players, targetPoints, format) {
   const n = players.length;
   const tour = {
-    id: 'T' + Date.now() + '-' + Math.floor(Math.random() * 1e6),
+    id: 'T' + Date.now() + '-' + randomIdSuffix(),
     createdAt: Date.now(),
     updatedAt: Date.now(),
     finished: false,
@@ -1356,6 +1373,7 @@ function applyLang() {
   set('live-on', 'liveOn');
   set('live-wa', 'waShare');
   set('live-copy', 'copyLink');
+  set('live-stop', 'liveStop');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
 }
 
@@ -1550,7 +1568,7 @@ function startTournament() {
   const tour = newTournamentObj(names, targetPoints, setupFormat);
   if (setupMe !== null && setupMe < names.length) {
     tour.meIndex = setupMe;                                  // local "this is me" (star)
-    if (session) tour.claims = { [session.user.email]: setupMe }; // account-linked personal stats
+    if (session) tour.claims = { [session.user.id]: setupMe }; // account-linked personal stats (opaque id, never email)
   }
   db.tournaments.unshift(tour);
   db.lastPlayers = names.slice();
@@ -2274,6 +2292,29 @@ async function makeTournamentPublic(tour) {
   saveDb();
 }
 
+// Revoke a live/public share: the r.html link stops working immediately.
+async function stopSharing() {
+  const tour = current();
+  if (!tour || !session) return;
+  const btn = document.getElementById('live-stop');
+  if (btn) btn.disabled = true;
+  try {
+    const res = await sbFetch('/rest/v1/tournaments?id=eq.' + encodeURIComponent(tour.id), {
+      method: 'PATCH',
+      headers: { Prefer: 'return=minimal' },
+      body: JSON.stringify({ is_public: false }),
+    });
+    if (!res.ok) throw new Error('patch ' + res.status);
+    tour.isPublic = false;
+    saveDb();
+    render();
+    showToast(t('shareStopped'));
+  } catch (e) {
+    showToast(t('publicErr'));
+  }
+  if (btn) btn.disabled = false;
+}
+
 async function publishTournament() {
   const tour = current();
   if (!tour || !session) return;
@@ -2355,7 +2396,7 @@ function renderLeaderboardInto(tbodyId, tour) {
   const order = rankOrder(tour);
   const tbody = document.getElementById(tbodyId);
   tbody.innerHTML = '';
-  let myClaim = session ? (tour.claims || {})[session.user.email] : undefined;
+  let myClaim = session ? (tour.claims || {})[session.user.id] : undefined;
   if (myClaim === undefined && Number.isInteger(tour.meIndex)) myClaim = tour.meIndex;
   let prevKey = null, prevRank = 0;
   order.forEach((i, idx) => {
@@ -2556,11 +2597,11 @@ function renderHome() {
 
   // Personal stats: aggregate the slots the signed-in user claimed as "me".
   const myCard = document.getElementById('mystats-card');
-  const email = session ? session.user.email : null;
-  if (email) {
+  const uid = session ? session.user.id : null;
+  if (uid) {
     let pts = 0, won = 0, games = 0, tours = 0, titles = 0;
     db.tournaments.forEach(tour => {
-      const i = (tour.claims || {})[email];
+      const i = (tour.claims || {})[uid];
       if (i === undefined) return;
       tours++; pts += tour.points[i]; won += tour.gamesWon[i]; games += tour.gamesPlayed[i];
       if (tour.finished && tour.history.length > 0 && rankOrder(tour)[0] === i) titles++;
