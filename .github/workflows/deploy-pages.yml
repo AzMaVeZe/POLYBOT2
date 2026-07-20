@@ -29,6 +29,7 @@ jobs:
           cp r.html _site/r.html
           cp privacy.html _site/privacy.html
           cp og.png _site/og.png
+          cp CNAME _site/CNAME
           cp -r pwa/. _site/
       - uses: actions/configure-pages@v5
         with:
