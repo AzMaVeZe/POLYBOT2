@@ -658,6 +658,14 @@
       <h2 id="cloud-title"></h2>
       <div id="cloud-logged-out">
         <div class="hint" id="cloud-hint" style="text-align:start"></div>
+        <!-- One-tap providers come first: fastest path in, no typing. -->
+        <button type="button" class="oauth-btn google" onclick="doOAuth('google')" id="google-btn"></button>
+        <button type="button" class="oauth-btn facebook" onclick="doOAuth('facebook')" id="facebook-btn"></button>
+        <!-- Apple sign-in: re-enable once the Apple provider is configured in Supabase
+        <button type="button" class="oauth-btn apple" onclick="doOAuth('apple')" id="apple-btn"></button>
+        -->
+        <div class="oauth-sep" id="oauth-sep"><span id="oauth-or"></span></div>
+        <!-- Email is secondary: one button expands the username/password fields. -->
         <button type="button" class="secondary" onclick="toggleCloudForm(true)" id="cloud-open-btn"></button>
         <div id="cloud-form-wrap">
         <label for="cloud-email" id="lcloud-email"></label>
@@ -667,12 +675,6 @@
         <div class="error-msg" id="cloud-error" role="alert"></div>
         <button type="button" onclick="cloudLogin()" id="cloud-login-btn"></button>
         <button type="button" class="secondary" onclick="cloudSignup()" id="cloud-signup-btn"></button>
-        <div class="oauth-sep" id="oauth-sep"><span id="oauth-or"></span></div>
-        <button type="button" class="oauth-btn google" onclick="doOAuth('google')" id="google-btn"></button>
-        <button type="button" class="oauth-btn facebook" onclick="doOAuth('facebook')" id="facebook-btn"></button>
-        <!-- Apple sign-in: re-enable once the Apple provider is configured in Supabase
-        <button type="button" class="oauth-btn apple" onclick="doOAuth('apple')" id="apple-btn"></button>
-        -->
         </div>
       </div>
     </div>
@@ -1007,7 +1009,7 @@ const STR = {
     thPlayer: 'שחקן', thPoints: 'נקודות', thWon: 'נצ׳', thGames: 'מש׳',
     cloudTitle: '☁️ חשבון ענן',
     cloudHint: 'התחברות שומרת את כל הטורנירים בענן ומסנכרנת אוטומטית בין המכשירים שלך. אפשר להמשיך גם בלי חשבון — הכול יישמר במכשיר.',
-    cloudOpenBtn: 'התחברות / הרשמה',
+    cloudOpenBtn: '✉️ כניסה עם אימייל',
     loginCta: 'התחברות / הרשמה',
     targetHint: 'טיפ: יעד אי־זוגי (למשל 21) מונע תיקו.',
     guestNote: 'לא מחובר/ת. המשחקים נשמרים על המכשיר הזה בלבד.',
@@ -1200,7 +1202,7 @@ const STR = {
     thPlayer: 'Player', thPoints: 'Points', thWon: 'W', thGames: 'GP',
     cloudTitle: '☁️ Cloud account',
     cloudHint: 'Signing in saves all tournaments to the cloud and syncs them across your devices. You can keep playing without an account — everything stays on this device.',
-    cloudOpenBtn: 'Sign in / Sign up',
+    cloudOpenBtn: '✉️ Sign in with email',
     loginCta: 'Sign in / Sign up',
     targetHint: 'Tip: an odd target (e.g. 21) rules out ties.',
     guestNote: 'Not signed in. Games are saved on this device only.',
@@ -2975,10 +2977,12 @@ async function resolvePendingInvite() {
     // Anon-callable: a friend_token is a random secret handed only to the
     // recipient of the link, so this is safe to resolve before sign-in too.
     const res = await sbFetch('/rest/v1/rpc/resolve_invite', { method: 'POST', body: JSON.stringify({ token: token }) });
-    if (!res.ok) { store.removeItem(INVITE_TOKEN_KEY); return; }
+    if (!res.ok) { store.removeItem(INVITE_TOKEN_KEY); pendingInvite = null; return; }
     const hit = await res.json();
-    if (!hit || !hit.uid) { store.removeItem(INVITE_TOKEN_KEY); return; }
-    if (session && hit.uid === session.user.id) { store.removeItem(INVITE_TOKEN_KEY); return; }
+    if (!hit || !hit.uid) { store.removeItem(INVITE_TOKEN_KEY); pendingInvite = null; return; }
+    // Your own invite link — you can't befriend yourself. Drop it silently
+    // (this also clears a self-invite stashed while you were logged out).
+    if (session && hit.uid === session.user.id) { store.removeItem(INVITE_TOKEN_KEY); pendingInvite = null; return; }
     pendingInvite = { token: token, name: hit.name || hit.nickname || t('friendUnnamed') };
     if (session) { view = 'friends'; render(); }
     else { view = 'home'; cloudFormOpen = true; render(); }
@@ -3095,9 +3099,9 @@ function scheduleCloudPush() {
   pushTimer = setTimeout(() => { syncNow(false); }, 1500);
 }
 
-// Collapsed by default once the user already has tournaments (returning
-// organizer mid-flow); expanded on a fresh device where signing up is primary.
-let cloudFormOpen = null; // null = automatic
+// The email/password form is collapsed by default (OAuth buttons lead);
+// set to true when the user taps "sign in with email" or follows a login link.
+let cloudFormOpen = null; // null = collapsed until explicitly opened
 function toggleCloudForm(open) {
   cloudFormOpen = open;
   renderCloud();
@@ -3157,9 +3161,9 @@ function renderCloud() {
     if (guest) guest.classList.remove('hidden');
     chip.classList.add('hidden');
     menu.classList.add('hidden');
-    // Keep the home screen light: collapse the login form behind one button
-    // when the user already has tournaments to get back to.
-    const open = cloudFormOpen !== null ? cloudFormOpen : db.tournaments.length === 0;
+    // OAuth buttons lead; the email form stays collapsed behind its own
+    // button until the user explicitly asks for it, keeping the screen light.
+    const open = cloudFormOpen === true;
     const wrap = document.getElementById('cloud-form-wrap');
     const openBtn = document.getElementById('cloud-open-btn');
     if (wrap) wrap.classList.toggle('hidden', !open);
