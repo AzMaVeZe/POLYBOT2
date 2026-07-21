@@ -197,7 +197,8 @@ const server = http.createServer((req, res) => {
       const q = String((data || {}).q || '').trim().toLowerCase();
       const hit = Object.values(profiles).find(p =>
         (p.email && p.email.toLowerCase() === q) ||
-        (p.nickname && p.nickname.toLowerCase() === q));
+        (p.nickname && p.nickname.toLowerCase() === q) ||
+        (p.name && p.name.toLowerCase() === q));
       return json(res, 200, hit ? { uid: hit.user_id, name: hit.name, nickname: hit.nickname } : null);
     }
 

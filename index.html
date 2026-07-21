@@ -54,6 +54,13 @@
   }
   .container { max-width: 560px; margin: 0 auto; }
   .topbar { display: flex; align-items: center; gap: 8px; }
+  .friends-btn { width: auto; min-height: 40px; padding: 6px 12px; margin: 0; flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 4px; border-radius: 999px;
+    background: var(--card); border: 1px solid #334155; color: var(--text); font-size: 1.05rem; position: relative; }
+  .friends-btn:active { transform: scale(0.96); }
+  .friends-btn-count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
+    background: var(--red); color: #fff; font-size: 0.72rem; font-weight: 800;
+    display: inline-flex; align-items: center; justify-content: center; }
   .lang-btn { margin-inline-start: auto; }
   #user-chip {
     display: flex;
@@ -604,6 +611,10 @@
       <span class="user-email" id="user-email"></span>
       <span class="sync-dot ok" id="sync-dot" role="img" aria-label=""></span>
     </div>
+    <button type="button" class="friends-btn hidden" id="friends-btn" onclick="gotoFriends()" aria-haspopup="true">
+      <span aria-hidden="true">👥</span>
+      <span class="friends-btn-count hidden" id="friends-btn-count" aria-hidden="true"></span>
+    </button>
     <button type="button" class="lang-btn" id="lang-btn" onclick="toggleLang()">English</button>
   </div>
   <div id="user-menu" class="hidden">
@@ -1051,8 +1062,8 @@ const STR = {
     nickSaveBtn: 'שמירה',
     nickSaved: 'הכינוי נשמר',
     nickTaken: 'הכינוי תפוס — נסו כינוי אחר',
-    rosterHint: 'שם מהרשימה שלכם מזוהה ומקושר אוטומטית; כל שם אחר נשאר שחקן אנונימי.',
-    dirLabel: 'הוספת שחקן רשום (מייל או כינוי מדויק)',
+    rosterHint: 'שם מהרשימה שלכם מזוהה אוטומטית. לשחקן רשום אחר — הוסיפו לפי מייל, כינוי או שם מלא. כל שם אחר נשאר אנונימי.',
+    dirLabel: 'הוספת שחקן רשום (מייל, כינוי או שם מלא מדויק)',
     dirBtn: 'איתור',
     dirFound: 'נמצא ושובץ',
     dirNotFound: 'לא נמצא שחקן רשום עם המייל/כינוי הזה',
@@ -1244,8 +1255,8 @@ const STR = {
     nickSaveBtn: 'Save',
     nickSaved: 'Nickname saved',
     nickTaken: 'Nickname taken — try another',
-    rosterHint: 'Names from your list link automatically; any other name stays an anonymous player.',
-    dirLabel: 'Add a registered player (exact email or nickname)',
+    rosterHint: 'Names from your list are recognized automatically. Add another registered player by email, nickname, or full name. Any other name stays anonymous.',
+    dirLabel: 'Add a registered player (exact email, nickname, or full name)',
     dirBtn: 'Find',
     dirFound: 'Found and added',
     dirNotFound: 'No registered player with that email/nickname',
@@ -2042,7 +2053,7 @@ async function dirFind() {
     if (!res.ok) throw new Error('http ' + res.status);
     const hit = await res.json();
     if (!hit || !hit.uid) { out.textContent = t('dirNotFound'); return; }
-    const display = (hit.name || hit.nickname || q.split('@')[0]).slice(0, 40);
+    const display = (hit.nickname || hit.name || q.split('@')[0]).slice(0, 40);
     rosterUpsert({ n: display, nick: hit.nickname, em: q.indexOf('@') !== -1 ? q : null, uid: hit.uid });
     pulling = true; try { saveDb(); } finally { pulling = false; }
     for (let i = 0; i < setupCount; i++) {
@@ -2074,7 +2085,7 @@ async function startTournament() {
         const res = await sbFetch('/rest/v1/rpc/find_player', { method: 'POST', body: JSON.stringify({ q: names[i] }) });
         if (res.ok) {
           const hit = await res.json();
-          if (hit && hit.uid) m = { n: (hit.name || hit.nickname || names[i].split('@')[0]).slice(0, 40), nick: hit.nickname, em: names[i].toLowerCase(), uid: hit.uid };
+          if (hit && hit.uid) m = { n: (hit.nickname || hit.name || names[i].split('@')[0]).slice(0, 40), nick: hit.nickname, em: names[i].toLowerCase(), uid: hit.uid };
         }
       } catch (e) { /* offline — keep anonymous */ }
     }
@@ -3682,11 +3693,21 @@ function renderHome() {
 // Small red dot on the avatar whenever there's something to act on, regardless
 // of which screen is currently showing.
 function updateFriendsBadge() {
+  const n = session ? db.pendingIncoming.length : 0;
   const dot = document.getElementById('chip-badge-dot');
-  if (dot) dot.classList.toggle('hidden', !session || db.pendingIncoming.length === 0);
+  if (dot) dot.classList.toggle('hidden', n === 0);
+  // Primary indicator: the always-visible top-bar Friends button.
+  const fbtn = document.getElementById('friends-btn');
+  if (fbtn) fbtn.classList.toggle('hidden', !session);
+  const count = document.getElementById('friends-btn-count');
+  if (count) {
+    count.textContent = n > 9 ? '9+' : String(n);
+    count.classList.toggle('hidden', n === 0);
+    fbtn.setAttribute('aria-label', n > 0 ? t('menuFriendsBadge', n) : t('menuFriends'));
+  }
   const menuBtn = document.getElementById('menu-friends');
   if (menuBtn) {
-    menuBtn.textContent = db.pendingIncoming.length > 0 ? t('menuFriendsBadge', db.pendingIncoming.length) : t('menuFriends');
+    menuBtn.textContent = n > 0 ? t('menuFriendsBadge', n) : t('menuFriends');
   }
 }
 

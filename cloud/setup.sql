@@ -93,15 +93,19 @@ create policy profiles_own on public.profiles
   using (auth.uid() = user_id)
   with check (auth.uid() = user_id);
 
--- Directory lookup: find one registered player by EXACT email or nickname.
--- Deliberately not a free-text search (no user enumeration); returns only the
--- public fields, to signed-in callers.
+-- Directory lookup: find one registered player by EXACT email, nickname, or
+-- full name (the display name from their account, e.g. their Google name) —
+-- so someone who never set a nickname is still addable by email or by name.
+-- Still exact-match only (no free-text/enumeration); returns only public
+-- fields, to signed-in callers. Full names aren't unique, so a name query
+-- returns a single arbitrary match — email/nickname stay the precise keys.
 create or replace function public.find_player(q text)
 returns jsonb language sql stable security definer set search_path = public as $$
   select jsonb_build_object('uid', user_id, 'name', name, 'nickname', nickname)
   from public.profiles
   where lower(email) = lower(trim(q))
      or (nickname is not null and nickname <> '' and lower(nickname) = lower(trim(q)))
+     or (name is not null and name <> '' and lower(name) = lower(trim(q)))
   limit 1
 $$;
 revoke all on function public.find_player(text) from public, anon;

@@ -49,8 +49,11 @@ async function mkctx(browser) {
   const pa = await ctxA.newPage();
   await pa.goto('http://localhost:8000/index.html');
   await signup(pa, 'alice@test.com', 'secret123');
-  await pa.click('#user-chip'); await sleep(150);
-  await pa.click('#menu-friends'); await sleep(300);
+  // The Friends entry point is a persistent top-bar button, not just a menu item.
+  if (await pa.isHidden('#friends-btn')) throw new Error('top-bar Friends button not visible when signed in');
+  await pa.click('#friends-btn'); await sleep(300);
+  if (await pa.isHidden('#friends-screen')) throw new Error('top-bar Friends button did not open the friends screen');
+  console.log('Top-bar Friends button opens the friends screen: OK');
   await pa.click('#friend-invite-btn'); await sleep(600);
   if (await pa.isHidden('#friend-invite-share')) throw new Error('invite share panel did not open');
   const waHref = decodeURIComponent(await pa.getAttribute('#friend-invite-wa', 'href'));
@@ -102,14 +105,15 @@ async function mkctx(browser) {
 
   // Bob syncs and should see a pending request + badge.
   await syncViaMenu(pb);
+  // The persistent top-bar Friends button carries the pending count.
+  const btnCount = await pb.textContent('#friends-btn-count');
+  if (btnCount.trim() !== '1') throw new Error('top-bar pending count wrong: ' + btnCount);
+  if (await pb.isHidden('#friends-btn-count')) throw new Error('top-bar pending count hidden despite a request');
   const menuTxt = await pb.textContent('#menu-friends');
   if (!/1/.test(menuTxt)) throw new Error('pending-count badge missing on menu item: ' + menuTxt);
-  await pb.click('#user-chip'); await sleep(150);
-  const dotVisible = await pb.isVisible('#chip-badge-dot');
-  if (!dotVisible) throw new Error('red badge dot not shown on avatar for a pending request');
-  await pb.click('#menu-friends'); await sleep(300);
+  await pb.click('#friends-btn'); await sleep(300);
   if (await pb.isHidden('#pending-card')) throw new Error('pending-requests card hidden despite a pending request');
-  console.log('Recipient sees the pending request (menu badge + avatar dot + card): OK');
+  console.log('Recipient sees the pending request (top-bar count + menu badge + card): OK');
 
   await pb.click('#pending-list .friend-actions .accept');
   await sleep(700);

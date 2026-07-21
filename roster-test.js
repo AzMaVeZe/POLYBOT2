@@ -113,8 +113,51 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const noHit = await page.textContent('#dir-result');
   if (/ace/.test(noHit)) throw new Error('free-text directory search should not match');
   console.log('Directory rejects free-text (exact email/nickname only): OK');
-
   await ctx.close();
+
+  // ---- Add a registered player by FULL NAME (no nickname) ----
+  // A user who signed up (e.g. via OAuth) with a full name but never set a
+  // nickname must still be addable by that exact full name.
+  const ctxN = await browser.newContext({ reducedMotion: 'reduce' });
+  await ctxN.addInitScript(() => {
+    localStorage.setItem('padelzit-cloud-url', 'http://localhost:9021');
+    localStorage.setItem('padelzit-cloud-key', 'k');
+  });
+  const pn = await ctxN.newPage();
+  await pn.goto('http://localhost:8000/index.html');
+  if (await pn.isVisible('#cloud-open-btn')) await pn.click('#cloud-open-btn');
+  await pn.fill('#cloud-email', 'noa@test.com'); await pn.fill('#cloud-pass', 'secret123');
+  await pn.click('#cloud-signup-btn'); await sleep(800);
+  // Simulate an OAuth-style full name on the profile (no nickname), then push.
+  await pn.evaluate(async () => {
+    const sess = JSON.parse(localStorage.getItem('padelzit-session'));
+    await fetch('http://localhost:9021/rest/v1/profiles?on_conflict=user_id', {
+      method: 'POST', headers: { apikey: 'k', Authorization: 'Bearer ' + sess.access_token, 'Content-Type': 'application/json', Prefer: 'resolution=merge-duplicates,return=minimal' },
+      body: JSON.stringify({ user_id: sess.user.id, email: sess.user.email, name: 'Noa Cohen', nickname: null, roster: [] }),
+    });
+  });
+  await ctxN.close();
+
+  // A different account looks Noa up by her exact full name.
+  const ctxM = await browser.newContext({ reducedMotion: 'reduce' });
+  await ctxM.addInitScript(() => {
+    localStorage.setItem('padelzit-cloud-url', 'http://localhost:9021');
+    localStorage.setItem('padelzit-cloud-key', 'k');
+  });
+  const pm = await ctxM.newPage();
+  await pm.goto('http://localhost:8000/index.html');
+  if (await pm.isVisible('#cloud-open-btn')) await pm.click('#cloud-open-btn');
+  await pm.fill('#cloud-email', 'gil@test.com'); await pm.fill('#cloud-pass', 'secret123');
+  await pm.click('#cloud-signup-btn'); await sleep(800);
+  await pm.click('#new-tour-btn');
+  await pm.fill('#dir-q', 'Noa Cohen'); await pm.click('#dir-btn'); await sleep(600);
+  const nameMsg = await pm.textContent('#dir-result');
+  if (!/Noa Cohen/.test(nameMsg)) throw new Error('full-name directory lookup failed: ' + nameMsg);
+  const filled = await pm.inputValue('#p0');
+  if (filled !== 'Noa Cohen') throw new Error('full-name lookup should fill the slot with the name, got: ' + filled);
+  console.log('Add a registered player by exact full name (no nickname): OK');
+  await ctxM.close();
+
   if (errors.length) throw new Error('page errors: ' + errors.join('; '));
   console.log('ALL ROSTER TESTS PASSED');
   await browser.close();
