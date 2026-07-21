@@ -5,8 +5,18 @@ const users = {};   // email -> {id, password}
 const rows = {};    // id -> {id, user_id, data}
 const tokens = {};  // access_token -> user_id
 const codes = {};   // auth_code -> user_id  (PKCE)
-const profiles = {}; // user_id -> {user_id, email, name, nickname, roster}
+const profiles = {}; // user_id -> {user_id, email, name, nickname, roster, friend_token}
+const friendEdges = []; // {requester, addressee, status, created_at}
+const tourStats = {}; // "tid|uid" -> {tournament_id, player_uid, games_played, games_won, finished, is_champion, updated_at}
 let counter = 0;
+
+function newToken() { return 'ft_' + (++counter) + '_' + Math.random().toString(36).slice(2); }
+function ensureProfile(uid, email) {
+  if (!profiles[uid]) profiles[uid] = { user_id: uid, email: email || '', name: null, nickname: null, roster: [], friend_token: newToken() };
+  return profiles[uid];
+}
+function edgeBetween(a, b) { return friendEdges.find(e => (e.requester === a && e.addressee === b) || (e.requester === b && e.addressee === a)); }
+function areFriends(a, b) { const e = edgeBetween(a, b); return !!e && e.status === 'accepted'; }
 
 const CORS = {
   'Access-Control-Allow-Origin': '*',
@@ -106,6 +116,11 @@ const server = http.createServer((req, res) => {
       const uid = authedUser(req);
       if (!uid) return json(res, 401, { message: 'JWT required' });
       Object.values(rows).filter(r => r.user_id === uid).forEach(r => delete rows[r.id]);
+      delete profiles[uid];
+      for (let i = friendEdges.length - 1; i >= 0; i--) {
+        if (friendEdges[i].requester === uid || friendEdges[i].addressee === uid) friendEdges.splice(i, 1);
+      }
+      Object.keys(tourStats).forEach(k => { if (tourStats[k].player_uid === uid) delete tourStats[k]; });
       const u = Object.values(users).find(x => x.id === uid);
       if (u) delete users[u.email];
       res.writeHead(204, CORS); res.end(); return;
@@ -164,7 +179,15 @@ const server = http.createServer((req, res) => {
       }
       if (req.method === 'POST') {
         const row = Array.isArray(data) ? data[0] : data;
-        profiles[uid] = { user_id: uid, email: row.email, name: row.name || null, nickname: row.nickname || null, roster: row.roster || [] };
+        // Mirrors the real upsert (on_conflict=user_id, merge-duplicates):
+        // fields not present in the payload — notably friend_token — are left
+        // untouched on an existing row, not wiped.
+        const existing = profiles[uid];
+        profiles[uid] = {
+          user_id: uid, email: row.email,
+          name: row.name || null, nickname: row.nickname || null, roster: row.roster || [],
+          friend_token: (existing && existing.friend_token) || newToken(),
+        };
         res.writeHead(201, CORS); res.end(); return;
       }
     }
@@ -176,6 +199,127 @@ const server = http.createServer((req, res) => {
         (p.email && p.email.toLowerCase() === q) ||
         (p.nickname && p.nickname.toLowerCase() === q));
       return json(res, 200, hit ? { uid: hit.user_id, name: hit.name, nickname: hit.nickname } : null);
+    }
+
+    // ---- Friends ----
+    if (path === '/rest/v1/rpc/reset_friend_token' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const u = Object.values(users).find(x => x.id === uid);
+      const p = ensureProfile(uid, u ? u.email : '');
+      p.friend_token = newToken();
+      return json(res, 200, p.friend_token);
+    }
+    if (path === '/rest/v1/rpc/resolve_invite' && req.method === 'POST') {
+      // Anon-callable, like the real RPC — a friend_token is a random secret,
+      // not a guessable email/nickname.
+      const token = (data || {}).token;
+      const hit = Object.values(profiles).find(p => p.friend_token === token);
+      return json(res, 200, hit ? { uid: hit.user_id, name: hit.name, nickname: hit.nickname } : null);
+    }
+    if (path === '/rest/v1/rpc/accept_invite' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const token = (data || {}).token;
+      const inviter = Object.values(profiles).find(p => p.friend_token === token);
+      if (!inviter) return json(res, 200, 'not_found');
+      if (inviter.user_id === uid) return json(res, 200, 'self');
+      const e = edgeBetween(inviter.user_id, uid);
+      if (e) { e.status = 'accepted'; }
+      else { friendEdges.push({ requester: inviter.user_id, addressee: uid, status: 'accepted', created_at: new Date().toISOString() }); }
+      return json(res, 200, 'accepted');
+    }
+    if (path === '/rest/v1/rpc/request_friend' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const email = String((data || {}).target_email || '').trim().toLowerCase();
+      const target = Object.values(profiles).find(p => (p.email || '').toLowerCase() === email);
+      if (!target) return json(res, 200, 'not_found');
+      if (target.user_id === uid) return json(res, 200, 'self');
+      if (areFriends(uid, target.user_id)) return json(res, 200, 'already_friends');
+      const mine = friendEdges.find(e => e.requester === uid && e.addressee === target.user_id && e.status === 'pending');
+      if (mine) return json(res, 200, 'already_pending');
+      const theirs = friendEdges.find(e => e.requester === target.user_id && e.addressee === uid && e.status === 'pending');
+      if (theirs) { theirs.status = 'accepted'; return json(res, 200, 'accepted'); }
+      friendEdges.push({ requester: uid, addressee: target.user_id, status: 'pending', created_at: new Date().toISOString() });
+      return json(res, 200, 'sent');
+    }
+    if (path === '/rest/v1/rpc/respond_friend_request' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const { requester_uid, do_accept } = data || {};
+      const idx = friendEdges.findIndex(e => e.requester === requester_uid && e.addressee === uid && e.status === 'pending');
+      if (idx !== -1) {
+        if (do_accept) friendEdges[idx].status = 'accepted';
+        else friendEdges.splice(idx, 1);
+      }
+      res.writeHead(204, CORS); res.end(); return;
+    }
+    if (path === '/rest/v1/rpc/unfriend' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const other = (data || {}).other_uid;
+      for (let i = friendEdges.length - 1; i >= 0; i--) {
+        const e = friendEdges[i];
+        if ((e.requester === uid && e.addressee === other) || (e.requester === other && e.addressee === uid)) friendEdges.splice(i, 1);
+      }
+      res.writeHead(204, CORS); res.end(); return;
+    }
+    if (path === '/rest/v1/rpc/list_friend_state' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const friends = friendEdges
+        .filter(e => e.status === 'accepted' && (e.requester === uid || e.addressee === uid))
+        .map(e => { const other = e.requester === uid ? e.addressee : e.requester; const p = profiles[other]; return p ? { uid: p.user_id, name: p.name, nickname: p.nickname } : null; })
+        .filter(Boolean);
+      const pending = friendEdges
+        .filter(e => e.status === 'pending' && e.addressee === uid)
+        .map(e => { const p = profiles[e.requester]; return p ? { uid: p.user_id, name: p.name, nickname: p.nickname, since: e.created_at } : null; })
+        .filter(Boolean);
+      return json(res, 200, { friends, pending });
+    }
+    if (path === '/rest/v1/rpc/sync_tournament_stats' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const { tid, stats } = data || {};
+      const tour = rows[tid];
+      if (!tour || tour.user_id !== uid) { res.writeHead(204, CORS); res.end(); return; }
+      const hist = (tour.data && tour.data.history) || [];
+      const players = (tour.data && tour.data.players) || [];
+      const claims = (tour.data && tour.data.claims) || {};
+      if (players.length < 4 || hist.length < 3 || typeof claims !== 'object') { res.writeHead(204, CORS); res.end(); return; }
+      (Array.isArray(stats) ? stats : []).forEach(rec => {
+        const pUid = rec && rec.uid;
+        if (!pUid || !(pUid in claims)) return;
+        const played = Math.max(0, Math.min(Number(rec.played) || 0, hist.length));
+        const won = Math.max(0, Math.min(Number(rec.won) || 0, played));
+        const isChamp = !!rec.champion && !!tour.data.finished;
+        tourStats[tid + '|' + pUid] = {
+          tournament_id: tid, player_uid: pUid, games_played: played, games_won: won,
+          finished: !!tour.data.finished, is_champion: isChamp, updated_at: new Date().toISOString(),
+        };
+      });
+      res.writeHead(204, CORS); res.end(); return;
+    }
+    if (path === '/rest/v1/rpc/get_friends_leaderboard' && req.method === 'POST') {
+      const uid = authedUser(req);
+      if (!uid) return json(res, 401, { message: 'JWT required' });
+      const circle = new Set([uid]);
+      friendEdges.filter(e => e.status === 'accepted' && (e.requester === uid || e.addressee === uid))
+        .forEach(e => circle.add(e.requester === uid ? e.addressee : e.requester));
+      const monthKey = new Date().toISOString().slice(0, 7); // YYYY-MM, matches date_trunc('month')
+      const out = [...circle].map(pUid => {
+        const p = profiles[pUid];
+        if (!p) return null;
+        const mine = Object.values(tourStats).filter(s => s.player_uid === pUid);
+        const pts = s => s.games_played + s.games_won * 2 + (s.finished ? 3 : 0) + (s.is_champion ? 10 : 0);
+        const month_score = mine.filter(s => s.updated_at.slice(0, 7) === monthKey).reduce((a, s) => a + pts(s), 0);
+        const alltime_score = mine.reduce((a, s) => a + pts(s), 0);
+        const titles = mine.filter(s => s.is_champion).length;
+        const games_won = mine.reduce((a, s) => a + s.games_won, 0);
+        return { uid: p.user_id, name: p.name, nickname: p.nickname, month_score, alltime_score, titles, games_won };
+      }).filter(Boolean).sort((a, b) => b.month_score - a.month_score || b.alltime_score - a.alltime_score);
+      return json(res, 200, out);
     }
 
     // Account-free live publish: create/update an ownerless row keyed by
@@ -207,7 +351,12 @@ const server = http.createServer((req, res) => {
     }
 
     // debug endpoint for tests
-    if (path === '/__state') return json(res, 200, { users: Object.keys(users), rows: Object.values(rows).map(r => ({ id: r.id, user_id: r.user_id, is_public: !!r.is_public })) });
+    if (path === '/__state') return json(res, 200, {
+      users: Object.keys(users),
+      rows: Object.values(rows).map(r => ({ id: r.id, user_id: r.user_id, is_public: !!r.is_public })),
+      friendEdges: friendEdges.slice(),
+      tourStats: Object.values(tourStats),
+    });
 
     json(res, 404, { message: 'not found: ' + req.method + ' ' + path });
   });

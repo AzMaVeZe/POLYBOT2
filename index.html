@@ -78,6 +78,10 @@
     justify-content: center;
     flex: 0 0 auto;
   }
+  .avatar-wrap { position: relative; display: inline-flex; flex: 0 0 auto; }
+  .badge-dot { position: absolute; top: -2px; inset-inline-end: -2px;
+    width: 9px; height: 9px; border-radius: 50%;
+    background: var(--red); border: 2px solid var(--bg); }
   #user-chip .user-email {
     font-size: 0.82rem;
     font-weight: 600;
@@ -96,19 +100,36 @@
   #user-chip:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* Guest-device note: makes it clear that, without signing in, games live only on this device. */
-  #guest-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  #guest-note, #invite-pending-note { display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
     margin-top: 10px; padding: 10px 12px; border-radius: 10px;
     background: var(--card-2); border: 1px solid rgba(148,163,184,.22);
     color: var(--muted); font-size: .82rem; line-height: 1.4; }
-  #guest-note .guest-note-link { background: none; border: none; padding: 0; margin: 0;
+  #invite-pending-note { border-color: rgba(56,189,248,.4); }
+  #guest-note .guest-note-link, #invite-pending-note .guest-note-link {
+    background: none; border: none; padding: 0; margin: 0;
     color: var(--accent); font-weight: 800; font-size: .82rem; cursor: pointer;
     text-decoration: underline; min-height: 0; width: auto; }
-  #guest-note .guest-note-link:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+  #guest-note .guest-note-link:focus-visible, #invite-pending-note .guest-note-link:focus-visible {
+    outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
 
   .inline-row { display: flex; gap: 8px; align-items: center; }
   .inline-row input { flex: 1; margin-bottom: 0; min-width: 0; }
   .inline-row button { width: auto; flex: 0 0 auto; margin: 0; padding: 10px 16px; }
   .link-badge { color: var(--green); font-size: .75rem; font-weight: 800; white-space: nowrap; }
+  .link-badge.neutral { color: var(--muted); font-weight: 700; }
+
+  /* Friends screen */
+  .friend-row { display: flex; align-items: center; gap: 10px; padding: 10px 0;
+    border-bottom: 1px solid rgba(148,163,184,.16); }
+  .friend-row:last-child { border-bottom: none; }
+  .friend-row .fname { flex: 1; min-width: 0; font-weight: 700; overflow-wrap: anywhere; }
+  .friend-row .fscore { font-weight: 800; color: var(--accent); white-space: nowrap; }
+  .friend-row .fsub { color: var(--muted); font-size: .78rem; }
+  .friend-actions { display: flex; gap: 8px; flex: 0 0 auto; }
+  .friend-actions button { width: auto; min-height: 44px; padding: 8px 14px; margin: 0; }
+  .friend-actions .accept { background: linear-gradient(135deg, var(--green), #6ee7b7); color: #052e1a; }
+  .friend-unfriend { background: none; border: none; color: var(--muted); font-size: 1rem;
+    width: 32px; height: 32px; min-height: 32px; padding: 0; margin: 0; flex: 0 0 auto; }
   .pname { background: none; border: none; width: auto; min-height: 0; padding: 2px 6px;
     margin: 0; color: inherit; font: inherit; font-weight: inherit; cursor: pointer;
     border-radius: 8px; border: 1px dashed transparent; }
@@ -576,7 +597,10 @@
 <div class="container">
   <div class="topbar">
     <div id="user-chip" class="hidden" onclick="toggleUserMenu()" onkeydown="chipKey(event)" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu">
-      <span class="avatar" id="user-avatar" aria-hidden="true">👤</span>
+      <span class="avatar-wrap">
+        <span class="avatar" id="user-avatar" aria-hidden="true">👤</span>
+        <span class="badge-dot hidden" id="chip-badge-dot" aria-hidden="true"></span>
+      </span>
       <span class="user-email" id="user-email"></span>
       <span class="sync-dot ok" id="sync-dot" role="img" aria-label=""></span>
     </div>
@@ -589,6 +613,7 @@
       <input type="text" id="menu-nick" maxlength="20" autocomplete="off">
       <button type="button" class="secondary" onclick="saveNickname()" id="menu-nick-save"></button>
     </div>
+    <button type="button" class="secondary" onclick="gotoFriends()" id="menu-friends"></button>
     <button type="button" class="secondary" onclick="syncNow(true)" id="menu-sync" style="margin-top:0"></button>
     <button type="button" class="secondary" onclick="cloudLogout()" id="menu-logout"></button>
     <button type="button" class="secondary danger" onclick="deleteAccountAsk()" id="menu-delete"></button>
@@ -599,6 +624,11 @@
   <!-- HOME SCREEN -->
   <div id="home-screen" class="hidden">
     <button onclick="gotoSetup()" id="new-tour-btn"></button>
+    <div id="invite-pending-note" class="hidden" role="note">
+      <span aria-hidden="true">👥</span>
+      <span id="invite-pending-text"></span>
+      <button type="button" class="guest-note-link" onclick="scrollToCloud()" id="invite-pending-link"></button>
+    </div>
     <div id="guest-note" class="hidden" role="note">
       <span aria-hidden="true">👤</span>
       <span id="guest-note-text"></span>
@@ -817,6 +847,46 @@
     <button class="secondary" onclick="resumeTournament()" id="resume-btn"></button>
     <button class="secondary" onclick="gotoHome()" id="podium-home-btn"></button>
   </div>
+
+  <!-- FRIENDS SCREEN -->
+  <div id="friends-screen" class="hidden">
+    <div id="invite-confirm-card" class="card hidden">
+      <div class="error-msg" id="invite-confirm-text"></div>
+      <div class="confirm-row">
+        <button onclick="acceptPendingInvite()" id="invite-accept-btn"></button>
+        <button class="secondary" onclick="dismissPendingInvite()" id="invite-dismiss-btn"></button>
+      </div>
+    </div>
+    <div class="card" id="friend-invite-card">
+      <h2 id="friend-invite-title"></h2>
+      <button type="button" onclick="shareFriendInvite()" id="friend-invite-btn"></button>
+      <div id="friend-invite-share" class="hidden">
+        <div class="hint" id="friend-invite-on" style="text-align:start"></div>
+        <a class="whatsapp" id="friend-invite-wa" target="_blank" rel="noopener noreferrer"></a>
+        <button type="button" class="secondary" onclick="copyFriendInviteLink()" id="friend-invite-copy"></button>
+      </div>
+    </div>
+    <div class="card hidden" id="pending-card">
+      <h2 id="pending-title"></h2>
+      <div id="pending-list"></div>
+    </div>
+    <div class="card" id="friend-search-card">
+      <h2 id="friend-search-title"></h2>
+      <label for="friend-email" id="lfriend-email"></label>
+      <div class="inline-row">
+        <input type="email" id="friend-email" autocomplete="off" maxlength="254">
+        <button type="button" onclick="requestFriendByEmail()" id="friend-search-btn"></button>
+      </div>
+      <div class="hint" id="friend-search-result" style="text-align:start" aria-live="polite"></div>
+    </div>
+    <div class="card hidden" id="friends-lb-card">
+      <h2 id="friends-lb-title"></h2>
+      <div class="hint" id="friends-lb-hint" style="text-align:start"></div>
+      <div id="friends-lb-list"></div>
+    </div>
+    <div class="hint hidden" id="friends-empty-hint" style="text-align:center"></div>
+    <button class="secondary" onclick="gotoHome()" id="friends-back-btn"></button>
+  </div>
 </div>
 <div id="update-banner" class="hidden" role="alert">
   <span id="update-text"></span>
@@ -988,6 +1058,40 @@ const STR = {
     dirNotFound: 'לא נמצא שחקן רשום עם המייל/כינוי הזה',
     dirErr: 'האיתור נכשל — בדקו את החיבור ונסו שוב',
     linkedBadge: '✓ מקושר',
+    registeredNotFriend: 'רשום · לא חבר',
+    friendUnnamed: 'שחקן',
+    menuFriends: '👥 חברים',
+    menuFriendsBadge: '👥 חברים ({n})',
+    friendsBackBtn: 'חזרה',
+    friendInviteTitle: '🔗 הזמנת חבר/ה',
+    friendInviteBtn: 'הזמנת חבר/ה לפדלזיט',
+    friendInviteOn: '✓ הקישור שלכם מוכן — שלחו אותו כדי להתחבר כחברים',
+    friendInviteWaText: 'בואו נתחבר כחברים בפדלזיט 🎾 האפליקציה החינמית לניהול טורנירי פדל:',
+    friendInviteErr: 'יצירת הקישור נכשלה — נסו שוב',
+    pendingTitle: '📥 בקשות חברות ממתינות',
+    friendSearchTitle: 'חיפוש חברים',
+    lfriendEmail: 'חיפוש לפי אימייל',
+    friendSearchBtn: 'שליחת בקשת חברות',
+    friendNotFound: 'לא נמצא משתמש עם האימייל הזה',
+    friendSelf: 'זה האימייל שלכם 🙂',
+    friendAlready: 'כבר חברים 🙂',
+    friendPending: 'בקשה כבר ממתינה לאישור',
+    friendSent: '✓ בקשת החברות נשלחה',
+    friendAccepted: 'עכשיו אתם חברים 🎉',
+    friendDeclined: 'הבקשה נדחתה',
+    friendSearchErr: 'משהו השתבש — נסו שוב',
+    friendAccept: 'אישור',
+    friendDecline: 'דחייה',
+    friendsLbTitle: '⚡ פעילות בין חברים',
+    friendsLbHint: 'ניקוד לפי שימוש באפליקציה — לא לפי ניצחונות בטורניר.',
+    friendsLbTitles: 'תארים',
+    friendsLbWins: 'ניצחונות',
+    friendsEmptyHint: 'עוד אין לכם חברים בפדלזיט — הזמינו חברים כדי לראות דירוג משותף.',
+    invitePendingText: 'מישהו הזמין אתכם להיות חברים בפדלזיט —',
+    invitePendingLink: 'התחברות לאישור',
+    inviteConfirmText: '{n} הזמינו אתכם להיות חברים',
+    inviteAcceptBtn: 'הוספה לחברים',
+    inviteDismissBtn: 'לא עכשיו',
     home: '🏠 מסך הבית',
     podium: '🎉 תוצאות הטורניר',
     finalTable: 'הטבלה הסופית',
@@ -1147,6 +1251,40 @@ const STR = {
     dirNotFound: 'No registered player with that email/nickname',
     dirErr: 'Lookup failed — check your connection and retry',
     linkedBadge: '✓ linked',
+    registeredNotFriend: 'Registered · not a friend',
+    friendUnnamed: 'Player',
+    menuFriends: '👥 Friends',
+    menuFriendsBadge: '👥 Friends ({n})',
+    friendsBackBtn: 'Back',
+    friendInviteTitle: '🔗 Invite a friend',
+    friendInviteBtn: 'Invite a friend to PadelZit',
+    friendInviteOn: '✓ Your link is ready — send it to become friends',
+    friendInviteWaText: "Let's connect as friends on PadelZit 🎾 the free padel tournament app:",
+    friendInviteErr: 'Could not create the link — try again',
+    pendingTitle: '📥 Pending friend requests',
+    friendSearchTitle: 'Find friends',
+    lfriendEmail: 'Search by email',
+    friendSearchBtn: 'Send friend request',
+    friendNotFound: 'No user found with that email',
+    friendSelf: "That's your own email 🙂",
+    friendAlready: 'Already friends 🙂',
+    friendPending: 'A request is already pending',
+    friendSent: '✓ Friend request sent',
+    friendAccepted: "You're friends now 🎉",
+    friendDeclined: 'Request declined',
+    friendSearchErr: 'Something went wrong — try again',
+    friendAccept: 'Accept',
+    friendDecline: 'Decline',
+    friendsLbTitle: '⚡ Friend activity',
+    friendsLbHint: 'Points from using the app — not tournament win/loss.',
+    friendsLbTitles: 'titles',
+    friendsLbWins: 'wins',
+    friendsEmptyHint: "You don't have any PadelZit friends yet — invite some to see a shared leaderboard.",
+    invitePendingText: 'Someone invited you to be friends on PadelZit —',
+    invitePendingLink: 'Sign in to confirm',
+    inviteConfirmText: '{n} invited you to be friends',
+    inviteAcceptBtn: 'Add as friend',
+    inviteDismissBtn: 'Not now',
     home: '🏠 Home',
     podium: '🎉 Tournament results',
     finalTable: 'Final table',
@@ -1324,8 +1462,35 @@ function rosterMatch(q) {
     (x.em && x.em === v)) || null;
 }
 
+/* ---------- friends ---------- */
+
+function sanitizeFriendList(arr) {
+  if (!Array.isArray(arr)) return [];
+  const out = [], seen = new Set();
+  arr.forEach(e => {
+    if (!e || typeof e !== 'object') return;
+    const uid = typeof e.uid === 'string' && e.uid.length <= 64 && e.uid.indexOf('@') === -1 ? e.uid : null;
+    if (!uid || seen.has(uid)) return;
+    seen.add(uid);
+    out.push({
+      uid: uid,
+      name: typeof e.name === 'string' ? e.name.slice(0, 40) : null,
+      nickname: typeof e.nickname === 'string' ? e.nickname.slice(0, 20) : null,
+    });
+  });
+  return out.slice(0, 300);
+}
+
+function friendDisplayName(f) {
+  return (f.nickname || f.name || t('friendUnnamed')).slice(0, 40);
+}
+
+function isFriendUid(uid) {
+  return !!(session && uid === session.user.id) || db.friends.some(f => f.uid === uid);
+}
+
 function loadDb() {
-  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [], ownerId: null, roster: [], profile: null };
+  db = { tournaments: [], lastPlayers: null, lastTarget: 32, deletedIds: [], ownerId: null, roster: [], profile: null, friends: [], pendingIncoming: [] };
   try {
     const raw = store.getItem(DB_KEY);
     if (raw) {
@@ -1343,8 +1508,11 @@ function loadDb() {
           db.profile = {
             name: typeof parsed.profile.name === 'string' ? parsed.profile.name.slice(0, 40) : null,
             nickname: typeof parsed.profile.nickname === 'string' ? parsed.profile.nickname.slice(0, 20) : null,
+            friendToken: typeof parsed.profile.friendToken === 'string' ? parsed.profile.friendToken : null,
           };
         }
+        db.friends = sanitizeFriendList(parsed.friends);
+        db.pendingIncoming = sanitizeFriendList(parsed.pendingIncoming);
       }
     }
   } catch (e) { /* corrupted storage — start fresh */ }
@@ -1618,6 +1786,25 @@ function applyLang() {
   set('ldir-q', 'dirLabel');
   set('dir-btn', 'dirBtn');
   set('live-stop', 'liveStop');
+  set('friends-back-btn', 'friendsBackBtn');
+  set('friend-invite-title', 'friendInviteTitle');
+  set('friend-invite-btn', 'friendInviteBtn');
+  set('friend-invite-on', 'friendInviteOn');
+  set('friend-invite-wa', 'waShare');
+  set('friend-invite-copy', 'copyLink');
+  set('pending-title', 'pendingTitle');
+  set('friend-search-title', 'friendSearchTitle');
+  set('lfriend-email', 'lfriendEmail');
+  set('friend-search-btn', 'friendSearchBtn');
+  set('friends-lb-title', 'friendsLbTitle');
+  set('friends-lb-hint', 'friendsLbHint');
+  set('friends-empty-hint', 'friendsEmptyHint');
+  set('invite-pending-text', 'invitePendingText');
+  set('invite-pending-link', 'invitePendingLink');
+  set('invite-accept-btn', 'inviteAcceptBtn');
+  set('invite-dismiss-btn', 'inviteDismissBtn');
+  document.getElementById('menu-friends').textContent =
+    db.pendingIncoming.length > 0 ? t('menuFriendsBadge', db.pendingIncoming.length) : t('menuFriends');
   ['ltarget', 'lcloud-email', 'lcloud-pass'].forEach(markReq);
 }
 
@@ -1819,13 +2006,19 @@ function renderSetup() {
   document.getElementById('dir-search').classList.toggle('hidden', !session);
 }
 
-// Green "linked" badge when the typed name resolves to a registered player.
+// Green "linked" badge only when the match is a confirmed friend (or self) —
+// that's exactly who startTournament() is allowed to attribute stats to.
+// A registered-but-not-friend match still fills in their real name, but gets
+// a neutral badge instead: no attribution without their consent.
 function updateLinkBadge(i) {
   const inp = document.getElementById('p' + i);
   const b = document.getElementById('link-badge-' + i);
   if (!inp || !b) return;
   const m = rosterMatch(inp.value);
-  b.textContent = m && m.uid ? t('linkedBadge') : '';
+  b.className = 'link-badge';
+  if (!m || !m.uid) { b.textContent = ''; return; }
+  if (isFriendUid(m.uid)) { b.textContent = t('linkedBadge'); }
+  else { b.textContent = t('registeredNotFriend'); b.className = 'link-badge neutral'; }
 }
 function openTournament(id) {
   activeId = id;
@@ -1899,7 +2092,10 @@ async function startTournament() {
   if (unique.size < names.length) { err.textContent = t('errUnique'); return; }
   const tour = newTournamentObj(names, targetPoints, setupFormat);
   tour.claims = {};
-  links.forEach((uid, i) => { if (uid) tour.claims[uid] = i; });
+  // Attribution requires mutual consent: only self or a confirmed friend gets
+  // stats/leaderboard credit. A registered-but-not-yet-friend match still
+  // supplied the correct display name above — it just stays unattributed.
+  links.forEach((uid, i) => { if (uid && isFriendUid(uid)) tour.claims[uid] = i; });
   if (setupMe !== null && setupMe < names.length) {
     tour.meIndex = setupMe;                                    // local "this is me" (star)
     if (session) tour.claims[session.user.id] = setupMe;       // account-linked personal stats (opaque id, never email)
@@ -2375,6 +2571,8 @@ function reconcileOwner() {
     db.lastPlayers = null;
     db.roster = [];
     db.profile = null;
+    db.friends = [];
+    db.pendingIncoming = [];
     db.ownerId = uid;
     activeId = null;
     view = 'home';
@@ -2445,6 +2643,7 @@ async function cloudAuth(path, isSignup) {
     render();
     if (isSignup) showToast(t('cloudSignupOk'));
     syncNow(true);
+    resolvePendingInvite();
   } else {
     // Signup succeeded but email confirmation is enabled — no session yet.
     err.textContent = t('cloudErrConfirm');
@@ -2461,6 +2660,8 @@ function cloudLogout() {
   db.ownerId = null;
   db.roster = [];
   db.profile = null;
+  db.friends = [];
+  db.pendingIncoming = [];
   activeId = null;
   view = 'home';
   pulling = true;
@@ -2559,13 +2760,14 @@ function stampOf(tour) { return tour.updatedAt || tour.createdAt || 0; }
 
 async function profilePull() {
   try {
-    const res = await sbFetch('/rest/v1/profiles?user_id=eq.' + encodeURIComponent(session.user.id) + '&select=name,nickname,roster');
+    const res = await sbFetch('/rest/v1/profiles?user_id=eq.' + encodeURIComponent(session.user.id) + '&select=name,nickname,roster,friend_token');
     if (!res.ok) return;                       // table may not exist yet — fine
     const rows = await res.json();
     if (rows.length) {
       db.profile = {
         name: rows[0].name || null,
         nickname: rows[0].nickname || null,
+        friendToken: rows[0].friend_token || null,
       };
       sanitizeRoster(rows[0].roster).forEach(rosterUpsert);
     }
@@ -2588,6 +2790,215 @@ async function profilePush() {
     });
     return res.ok ? null : res.status;
   } catch (e) { return 0; }
+}
+
+// Accepted friends + incoming pending requests, refreshed on every sync.
+async function fetchFriendState() {
+  try {
+    const res = await sbFetch('/rest/v1/rpc/list_friend_state', { method: 'POST', body: '{}' });
+    if (!res.ok) return;
+    const state = await res.json();
+    db.friends = sanitizeFriendList(state && state.friends);
+    db.pendingIncoming = sanitizeFriendList(state && state.pending);
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+  } catch (e) { /* offline — keep the last-known list */ }
+}
+
+// Per-tournament engagement totals for its claimed players (played/won/
+// champion). Reused, trusted logic (recompute/rankOrder already tested
+// throughout the app) — the server only re-validates cheap invariants, see
+// sync_tournament_stats() in cloud/setup.sql for why that split is safe.
+// Counts a game only if a SECOND distinct claimed account also played in it —
+// stops trivially inflating a score with anonymous slots.
+function computeEngagementStats(tour) {
+  if (!tour.claims || Object.keys(tour.claims).length === 0) return [];
+  if (tour.players.length < 4 || tour.history.length < 3) return [];
+  const idxToUid = {};
+  Object.entries(tour.claims).forEach(([uid, idx]) => { idxToUid[idx] = uid; });
+  const champIdx = (tour.finished && tour.history.length > 0) ? rankOrder(tour)[0] : null;
+  const stats = {};
+  Object.entries(tour.claims).forEach(([uid, idx]) => { stats[uid] = { played: 0, won: 0, champion: champIdx === idx }; });
+  tour.history.forEach(g => {
+    const onCourt = [...g.teamA, ...g.teamB];
+    onCourt.forEach(idx => {
+      const uid = idxToUid[idx];
+      if (!uid) return;
+      const hasRealOpponent = onCourt.some(j => j !== idx && idxToUid[j] && idxToUid[j] !== uid);
+      if (!hasRealOpponent) return;
+      stats[uid].played++;
+      const won = (g.teamA.includes(idx) && g.scoreA > g.scoreB) || (g.teamB.includes(idx) && g.scoreB > g.scoreA);
+      if (won) stats[uid].won++;
+    });
+  });
+  // A player who never shared a court with a second real account earned no
+  // real games — drop them entirely so they get NO credit, not even the
+  // finish/champion bonus (closes a fake-tournament gaming vector).
+  return Object.entries(stats)
+    .filter(([, s]) => s.played > 0)
+    .map(([uid, s]) => ({ uid, played: s.played, won: s.won, champion: s.champion }));
+}
+
+async function pushEngagementStats() {
+  const withClaims = db.tournaments.filter(tr => tr.claims && Object.keys(tr.claims).length && !tr.liveGuest);
+  for (const tr of withClaims) {
+    const stats = computeEngagementStats(tr);
+    if (!stats.length) continue;
+    try {
+      await sbFetch('/rest/v1/rpc/sync_tournament_stats', { method: 'POST', body: JSON.stringify({ tid: tr.id, stats: stats }) });
+    } catch (e) { /* best-effort — retried on next sync */ }
+  }
+}
+
+let leaderboardCache = null;
+async function fetchFriendsLeaderboard() {
+  if (!session) return null;
+  try {
+    const res = await sbFetch('/rest/v1/rpc/get_friends_leaderboard', { method: 'POST', body: '{}' });
+    if (!res.ok) return leaderboardCache;
+    leaderboardCache = await res.json();
+    return leaderboardCache;
+  } catch (e) { return leaderboardCache; }
+}
+
+// Ensure the account has a standing invite token (profiles.friend_token
+// defaults on first profile row creation; this only bootstraps the row if
+// profilePush() hasn't run yet, or the pull genuinely returned nothing).
+async function ensureFriendToken() {
+  if (db.profile && db.profile.friendToken) return db.profile.friendToken;
+  try {
+    const res = await sbFetch('/rest/v1/rpc/reset_friend_token', { method: 'POST', body: '{}' });
+    if (!res.ok) return null;
+    const token = await res.json();
+    db.profile = db.profile || {};
+    db.profile.friendToken = token;
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+    return token;
+  } catch (e) { return null; }
+}
+
+function friendInviteUrl(token) {
+  return appUrl() + '?invite=' + encodeURIComponent(token);
+}
+
+async function shareFriendInvite() {
+  if (!session) return;
+  const btn = document.getElementById('friend-invite-btn');
+  if (btn) btn.disabled = true;
+  const token = await ensureFriendToken();
+  if (btn) btn.disabled = false;
+  if (!token) { showToast(t('friendInviteErr')); return; }
+  const url = friendInviteUrl(token);
+  document.getElementById('friend-invite-wa').href = 'https://wa.me/?text=' +
+    encodeURIComponent(t('friendInviteWaText') + '\n' + url);
+  document.getElementById('friend-invite-share').classList.remove('hidden');
+  if (btn) btn.classList.add('hidden');
+}
+
+function copyFriendInviteLink() {
+  const token = db.profile && db.profile.friendToken;
+  if (!token) return;
+  const url = friendInviteUrl(token);
+  const done = () => showToast(t('linkCopied'));
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(done).catch(() => prompt(t('copyLink'), url));
+  } else { prompt(t('copyLink'), url); }
+}
+
+async function requestFriendByEmail() {
+  if (!session) return;
+  const input = document.getElementById('friend-email');
+  const out = document.getElementById('friend-search-result');
+  const email = input.value.trim();
+  if (!email) return;
+  out.textContent = '…';
+  try {
+    const res = await sbFetch('/rest/v1/rpc/request_friend', { method: 'POST', body: JSON.stringify({ target_email: email }) });
+    if (!res.ok) throw new Error('http ' + res.status);
+    const status = await res.json();
+    const key = {
+      not_found: 'friendNotFound', self: 'friendSelf', already_friends: 'friendAlready',
+      already_pending: 'friendPending', sent: 'friendSent', accepted: 'friendAccepted',
+    }[status] || 'friendSearchErr';
+    out.textContent = t(key);
+    if (status === 'sent' || status === 'accepted') { input.value = ''; await fetchFriendState(); renderFriends(); }
+  } catch (e) { out.textContent = t('friendSearchErr'); }
+}
+
+async function respondFriendRequest(requesterUid, accept) {
+  if (!session) return;
+  try {
+    await sbFetch('/rest/v1/rpc/respond_friend_request', { method: 'POST', body: JSON.stringify({ requester_uid: requesterUid, do_accept: accept }) });
+    db.pendingIncoming = db.pendingIncoming.filter(f => f.uid !== requesterUid);
+    if (accept) await fetchFriendState();
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+    renderFriends();
+    showToast(t(accept ? 'friendAccepted' : 'friendDeclined'));
+  } catch (e) { showToast(t('friendSearchErr')); }
+}
+
+async function unfriendPlayer(uid) {
+  if (!session) return;
+  try {
+    await sbFetch('/rest/v1/rpc/unfriend', { method: 'POST', body: JSON.stringify({ other_uid: uid }) });
+    db.friends = db.friends.filter(f => f.uid !== uid);
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+    renderFriends();
+  } catch (e) { showToast(t('friendSearchErr')); }
+}
+
+/* ---------- invite-link landing ---------- */
+
+const INVITE_TOKEN_KEY = 'padelzit-pending-invite';
+
+function stashInviteFromUrl() {
+  const token = new URLSearchParams(location.search).get('invite');
+  if (!token) return;
+  store.setItem(INVITE_TOKEN_KEY, token);
+  history.replaceState(null, '', location.pathname);
+}
+
+async function resolvePendingInvite() {
+  const token = store.getItem(INVITE_TOKEN_KEY);
+  if (!token) return;
+  try {
+    // Anon-callable: a friend_token is a random secret handed only to the
+    // recipient of the link, so this is safe to resolve before sign-in too.
+    const res = await sbFetch('/rest/v1/rpc/resolve_invite', { method: 'POST', body: JSON.stringify({ token: token }) });
+    if (!res.ok) { store.removeItem(INVITE_TOKEN_KEY); return; }
+    const hit = await res.json();
+    if (!hit || !hit.uid) { store.removeItem(INVITE_TOKEN_KEY); return; }
+    if (session && hit.uid === session.user.id) { store.removeItem(INVITE_TOKEN_KEY); return; }
+    pendingInvite = { token: token, name: hit.name || hit.nickname || t('friendUnnamed') };
+    if (session) { view = 'friends'; render(); }
+    else { view = 'home'; cloudFormOpen = true; render(); }
+  } catch (e) { /* try again on next load */ }
+}
+
+let pendingInvite = null;
+
+async function acceptPendingInvite() {
+  if (!pendingInvite) return;
+  try {
+    await sbFetch('/rest/v1/rpc/accept_invite', { method: 'POST', body: JSON.stringify({ token: pendingInvite.token }) });
+    store.removeItem(INVITE_TOKEN_KEY);
+    pendingInvite = null;
+    await fetchFriendState();
+    renderFriends();
+    showToast(t('friendAccepted'));
+  } catch (e) { showToast(t('friendSearchErr')); }
+}
+
+function dismissPendingInvite() {
+  store.removeItem(INVITE_TOKEN_KEY);
+  pendingInvite = null;
+  renderFriends();
+}
+
+function gotoFriends() {
+  if (!session) { toggleUserMenu(false); goToLogin(); return; }
+  toggleUserMenu(false);
+  view = 'friends';
+  render();
 }
 
 async function saveNickname() {
@@ -2653,15 +3064,18 @@ async function syncNow(alsoPull) {
   syncStatus = 'syncing';
   renderCloud();
   try {
-    if (alsoPull !== false) { await cloudPull(); await profilePull(); }
+    if (alsoPull !== false) { await cloudPull(); await profilePull(); await fetchFriendState(); }
     await cloudPush();
     await profilePush();
+    await pushEngagementStats();
     syncStatus = 'idle';
   } catch (e) {
     syncStatus = 'error';
     if (e && (e.status === 404 || e.status === 406)) showToast(t('cloudErrTable'));
   }
   renderCloud();
+  updateFriendsBadge();               // menu label + avatar dot, on every screen
+  if (view === 'friends') renderFriends();
 }
 
 function scheduleCloudPush() {
@@ -3167,6 +3581,12 @@ function renderPodium(tour) {
 function renderHome() {
   updateInstallUI();
   renderCloud();
+  const inviteNote = document.getElementById('invite-pending-note');
+  const showInviteNote = !!pendingInvite && !session;
+  inviteNote.classList.toggle('hidden', !showInviteNote);
+  if (showInviteNote) {
+    document.getElementById('invite-pending-text').textContent = t('invitePendingText') + ' ' + pendingInvite.name;
+  }
   const list = document.getElementById('tournament-list');
   if (db.tournaments.length === 0) {
     list.innerHTML = '<div class="empty-ball" aria-hidden="true">' + BRAND_BALL_SVG + '</div><div class="empty-note">' + t('noTours') + '</div>';
@@ -3259,11 +3679,106 @@ function renderHome() {
   }
 }
 
+// Small red dot on the avatar whenever there's something to act on, regardless
+// of which screen is currently showing.
+function updateFriendsBadge() {
+  const dot = document.getElementById('chip-badge-dot');
+  if (dot) dot.classList.toggle('hidden', !session || db.pendingIncoming.length === 0);
+  const menuBtn = document.getElementById('menu-friends');
+  if (menuBtn) {
+    menuBtn.textContent = db.pendingIncoming.length > 0 ? t('menuFriendsBadge', db.pendingIncoming.length) : t('menuFriends');
+  }
+}
+
+function renderFriends() {
+  if (!session) return;
+
+  const confirmCard = document.getElementById('invite-confirm-card');
+  if (pendingInvite) {
+    confirmCard.classList.remove('hidden');
+    document.getElementById('invite-confirm-text').textContent = t('inviteConfirmText', pendingInvite.name);
+  } else {
+    confirmCard.classList.add('hidden');
+  }
+
+  const pendingCard = document.getElementById('pending-card');
+  const pendingList = document.getElementById('pending-list');
+  if (db.pendingIncoming.length === 0) {
+    pendingCard.classList.add('hidden');
+  } else {
+    pendingCard.classList.remove('hidden');
+    pendingList.innerHTML = '';
+    db.pendingIncoming.forEach(f => {
+      const row = document.createElement('div');
+      row.className = 'friend-row';
+      const name = document.createElement('div');
+      name.className = 'fname';
+      name.textContent = friendDisplayName(f);
+      const actions = document.createElement('div');
+      actions.className = 'friend-actions';
+      const accept = document.createElement('button');
+      accept.type = 'button'; accept.className = 'accept'; accept.textContent = t('friendAccept');
+      accept.onclick = () => respondFriendRequest(f.uid, true);
+      const decline = document.createElement('button');
+      decline.type = 'button'; decline.className = 'secondary'; decline.textContent = t('friendDecline');
+      decline.onclick = () => respondFriendRequest(f.uid, false);
+      actions.appendChild(accept); actions.appendChild(decline);
+      row.appendChild(name); row.appendChild(actions);
+      pendingList.appendChild(row);
+    });
+  }
+
+  document.getElementById('friends-empty-hint').classList.toggle('hidden', db.friends.length > 0);
+  const lbCard = document.getElementById('friends-lb-card');
+  if (db.friends.length === 0) {
+    lbCard.classList.add('hidden');
+    document.getElementById('friends-lb-list').innerHTML = ''; // drop stale rows
+  } else {
+    lbCard.classList.remove('hidden');
+    const lbList = document.getElementById('friends-lb-list');
+    lbList.innerHTML = '<div class="hint">…</div>';
+    fetchFriendsLeaderboard().then(rows => {
+      if (view !== 'friends') return; // navigated away while awaiting
+      lbList.innerHTML = '';
+      (rows || []).forEach((r, idx) => {
+        const rank = idx + 1;
+        const row = document.createElement('div');
+        row.className = 'friend-row';
+        const badge = document.createElement('span');
+        badge.className = 'rank-badge' + (rank <= 3 ? ' rank-' + rank : '');
+        badge.textContent = rank;
+        const info = document.createElement('div');
+        info.className = 'fname';
+        const isMe = session && r.uid === session.user.id;
+        info.innerHTML = escapeHtml(r.name || r.nickname || t('friendUnnamed')) + (isMe ? ' ⭐' : '');
+        const sub = document.createElement('div');
+        sub.className = 'fsub';
+        sub.textContent = (r.titles > 0 ? '🏆' + r.titles + ' ' + t('friendsLbTitles') + ' · ' : '') +
+          r.games_won + ' ' + t('friendsLbWins');
+        info.appendChild(sub);
+        const score = document.createElement('div');
+        score.className = 'fscore';
+        score.textContent = r.month_score;
+        row.appendChild(badge); row.appendChild(info); row.appendChild(score);
+        if (!isMe) {
+          const rm = document.createElement('button');
+          rm.type = 'button'; rm.className = 'friend-unfriend'; rm.setAttribute('aria-label', t('friendDecline'));
+          rm.textContent = '✕';
+          rm.onclick = () => unfriendPlayer(r.uid);
+          row.appendChild(rm);
+        }
+        lbList.appendChild(row);
+      });
+    });
+  }
+}
+
 function render() {
-  const screens = { home: 'home-screen', setup: 'setup-screen', game: 'game-screen', podium: 'podium-screen' };
+  const screens = { home: 'home-screen', setup: 'setup-screen', game: 'game-screen', podium: 'podium-screen', friends: 'friends-screen' };
   Object.values(screens).forEach(id => document.getElementById(id).classList.add('hidden'));
   const tour = current();
   if ((view === 'game' || view === 'podium') && !tour) view = 'home';
+  if (view === 'friends' && !session) view = 'home';
   const activeEl = document.getElementById(screens[view]);
   activeEl.classList.remove('hidden');
   activeEl.classList.remove('screen-in');
@@ -3274,6 +3789,8 @@ function render() {
   else if (view === 'setup') renderSetup();
   else if (view === 'game') renderGame(tour);
   else if (view === 'podium') renderPodium(tour);
+  else if (view === 'friends') renderFriends();
+  updateFriendsBadge();
 }
 
 document.getElementById('setup-form').addEventListener('submit', e => {
@@ -3383,6 +3900,7 @@ if (PWA_HOST) {
 }
 
 document.querySelector('#brand-h1 .title-ball').innerHTML = BRAND_BALL_SVG;
+stashInviteFromUrl();
 loadDb();
 loadSession();
 // Scope local data to the restored account (claims pre-existing guest data for
@@ -3397,10 +3915,11 @@ if (db.tournaments.length > 0 && !db.tournaments[0].finished) {
 }
 applyLang();
 render();
+resolvePendingInvite();
 // Complete an OAuth redirect if we just came back from Google/Facebook,
 // otherwise resume any stored session.
 handleOAuthRedirect().then(loggedIn => {
-  if (loggedIn) { reconcileOwner(); renderCloud(); render(); syncNow(true); }
+  if (loggedIn) { reconcileOwner(); renderCloud(); render(); syncNow(true); resolvePendingInvite(); }
   else if (session) syncNow(true);
 });
 // Safety net: if OAuth tokens arrive without a full reload, process them too.

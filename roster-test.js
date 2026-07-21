@@ -1,5 +1,7 @@
 // Player roster: nickname profile, directory lookup by exact email/nickname,
-// roster suggestions, linking at setup, anonymous players untouched.
+// roster suggestions, name resolution at setup, anonymous players untouched.
+// Attribution (claims) for a non-friend match is covered by friends-test.js —
+// it now requires a confirmed friendship, not just a directory match.
 const { chromium } = require('playwright');
 const sleep = ms => new Promise(r => setTimeout(r, ms));
 
@@ -67,9 +69,13 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   if (!/ace/.test(dirMsg)) throw new Error('directory lookup by nickname failed: ' + dirMsg);
   const p0 = await page.inputValue('#p0');
   if (p0 !== 'ace') throw new Error('found player should fill slot 0, got: ' + p0);
+  // Not friends yet, so this is a neutral "registered, not a friend" badge —
+  // NOT the green "linked" badge, which is reserved for confirmed friends.
   const badge0 = await page.textContent('#link-badge-0');
-  if (!badge0.trim()) throw new Error('linked badge missing for directory-found player');
-  console.log('Directory lookup by exact nickname → slot filled + linked badge: OK');
+  if (!badge0.trim()) throw new Error('badge missing for directory-found player');
+  const badge0Cls = await page.getAttribute('#link-badge-0', 'class');
+  if (!badge0Cls.includes('neutral')) throw new Error('expected neutral (not-yet-friend) badge, got class: ' + badge0Cls);
+  console.log('Directory lookup by exact nickname → slot filled, neutral badge (not yet a friend): OK');
 
   // Typing an email links that registered player at start time.
   await page.fill('#p1', 'ariel@test.com'); // same person by email — should dedupe with roster...
@@ -91,12 +97,12 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
     const tr = JSON.parse(localStorage.getItem('puddlezit-db-v2')).tournaments[0];
     return { players: tr.players, claims: tr.claims };
   });
-  if (tourInfo.players[0] !== 'ace') throw new Error('linked player display name wrong: ' + tourInfo.players);
-  const claimIdx = Object.values(tourInfo.claims);
-  if (!claimIdx.includes(0)) throw new Error('claims missing linked player at slot 0: ' + JSON.stringify(tourInfo.claims));
-  if (claimIdx.length !== 1) throw new Error('anonymous players must not have claims: ' + JSON.stringify(tourInfo.claims));
+  if (tourInfo.players[0] !== 'ace') throw new Error('resolved display name wrong: ' + tourInfo.players);
+  // boaz and ariel are NOT friends: the correct name still gets used, but
+  // attribution (claims) requires mutual consent and must stay empty.
+  if (Object.keys(tourInfo.claims).length !== 0) throw new Error('claims should be empty without friendship: ' + JSON.stringify(tourInfo.claims));
   if (tourInfo.players.some(n => n.includes('@'))) throw new Error('an email leaked into player names: ' + tourInfo.players);
-  console.log('Start links registered player (claims) and keeps others anonymous, no emails: OK');
+  console.log('Start resolves the correct display name but does NOT attribute a non-friend: OK');
 
   // ---- Directory does NOT allow free-name search (privacy) ----
   await page.click('#game-home-btn');
