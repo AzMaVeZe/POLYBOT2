@@ -366,11 +366,13 @@ language sql stable security definer set search_path = public as $$
     from public.tournament_player_stats s
     join circle c on c.u = s.player_uid
   )
+  -- All aggregates qualify with scored.* — profiles also has updated_at, so an
+  -- unqualified reference is ambiguous.
   select p.user_id, p.name, p.nickname,
-    coalesce(sum(pts) filter (where updated_at >= date_trunc('month', now())), 0)::int as month_score,
-    coalesce(sum(pts), 0)::int as alltime_score,
-    coalesce(sum(1) filter (where is_champion), 0)::int as titles,
-    coalesce(sum(games_won), 0)::int as games_won
+    coalesce(sum(scored.pts) filter (where scored.updated_at >= date_trunc('month', now())), 0)::int as month_score,
+    coalesce(sum(scored.pts), 0)::int as alltime_score,
+    coalesce(sum(1) filter (where scored.is_champion), 0)::int as titles,
+    coalesce(sum(scored.games_won), 0)::int as games_won
   from circle c
   join public.profiles p on p.user_id = c.u
   left join scored on scored.player_uid = c.u
