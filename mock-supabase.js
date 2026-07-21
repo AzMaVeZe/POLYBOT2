@@ -179,6 +179,14 @@ const server = http.createServer((req, res) => {
       }
       if (req.method === 'POST') {
         const row = Array.isArray(data) ? data[0] : data;
+        // Mirror the DB's case-insensitive unique index on lower(nickname):
+        // a nickname already held by ANOTHER account is a conflict (23505 →
+        // HTTP 409), just like Postgres surfaces it through PostgREST.
+        const nick = (row.nickname || '').trim();
+        if (nick && Object.values(profiles).some(p => p.user_id !== uid &&
+            p.nickname && p.nickname.toLowerCase() === nick.toLowerCase())) {
+          return json(res, 409, { code: '23505', message: 'duplicate key value violates unique constraint "profiles_nickname_key"' });
+        }
         // Mirrors the real upsert (on_conflict=user_id, merge-duplicates):
         // fields not present in the payload — notably friend_token — are left
         // untouched on an existing row, not wiped.

@@ -48,6 +48,17 @@ async function mkctx(browser) {
   const ctxA = await mkctx(browser);
   const pa = await ctxA.newPage();
   await pa.goto('http://localhost:8000/index.html');
+
+  // ---- Login layout: OAuth buttons lead; email form is collapsed by default ----
+  if (await pa.isHidden('#google-btn')) throw new Error('Google button should be visible up-front (OAuth leads)');
+  if (await pa.isHidden('#facebook-btn')) throw new Error('Facebook button should be visible up-front (OAuth leads)');
+  if (await pa.isVisible('#cloud-form-wrap')) throw new Error('email form should start collapsed behind its button');
+  if (await pa.isHidden('#cloud-open-btn')) throw new Error('the email-login button should be visible when the form is collapsed');
+  await pa.click('#cloud-open-btn'); await sleep(150);
+  if (await pa.isHidden('#cloud-form-wrap')) throw new Error('email form should expand after tapping the email-login button');
+  if (await pa.isVisible('#cloud-open-btn')) throw new Error('the email-login button should hide once the form is open');
+  console.log('Login layout: OAuth first, email fields expand on demand: OK');
+
   await signup(pa, 'alice@test.com', 'secret123');
   // The Friends entry point is a persistent top-bar button, not just a menu item.
   if (await pa.isHidden('#friends-btn')) throw new Error('top-bar Friends button not visible when signed in');
@@ -88,6 +99,21 @@ async function mkctx(browser) {
   const friendRows = await pa.$$eval('#friends-lb-list .friend-row', els => els.length).catch(() => 0);
   if (friendRows < 1) throw new Error('Alice does not see Bob as a friend after sync, rows=' + friendRows);
   console.log('The inviter sees the new friend after syncing: OK');
+
+  // ---- Part 1b: opening your OWN invite link must never offer self-friending ----
+  // Repro of the reported bug: a guest opens the inviter's own link (token
+  // stashed while logged out), then signs in AS the inviter. No self-invite.
+  const ctxSelf = await mkctx(browser);
+  const ps = await ctxSelf.newPage();
+  await ps.goto('http://localhost:8000/index.html?invite=' + token); // Alice's own token
+  await sleep(500);
+  await login(ps, 'alice@test.com', 'secret123');
+  await sleep(800);
+  if (await ps.isVisible('#invite-confirm-card')) throw new Error('opening your own invite link offered self-friending after login');
+  await ps.click('#friends-btn'); await sleep(300);
+  if (await ps.isVisible('#invite-confirm-card')) throw new Error('a self-invite card leaked onto the friends screen');
+  console.log('Opening your own invite link never offers self-friending: OK');
+  await ctxSelf.close();
 
   // ---- Part 2: email-search request + accept, badge counts ----
   const ctxC = await mkctx(browser);

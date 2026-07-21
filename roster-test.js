@@ -59,6 +59,26 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await page.fill('#cloud-pass', 'secret456');
   await page.click('#cloud-signup-btn');
   await sleep(800);
+
+  // ---- B cannot claim a nickname already taken (case-insensitive) ----
+  // A already owns "ace"; B tries "ACE" and must be refused + rolled back.
+  await page.click('#user-chip'); await sleep(150);
+  await page.fill('#menu-nick', 'ACE');
+  await page.click('#menu-nick-save');
+  await sleep(700);
+  const toastTxt = await page.textContent('#toast').catch(() => '');
+  if (!/תפוס|taken/i.test(toastTxt)) throw new Error('expected a "nickname taken" toast, got: ' + toastTxt);
+  const bNick = await page.evaluate(() => JSON.parse(localStorage.getItem('puddlezit-db-v2')).profile.nickname);
+  if (bNick) throw new Error('a rejected nickname must be rolled back locally, got: ' + bNick);
+  const bServerNick = await page.evaluate(async () => {
+    const sess = JSON.parse(localStorage.getItem('padelzit-session'));
+    const r = await fetch('http://localhost:9021/rest/v1/profiles?user_id=eq.' + sess.user.id + '&select=nickname', { headers: { apikey: 'k', Authorization: 'Bearer ' + sess.access_token } });
+    return (await r.json())[0].nickname;
+  });
+  if (bServerNick) throw new Error('the server must not have stored the taken nickname, got: ' + bServerNick);
+  console.log('A taken nickname is refused case-insensitively and rolled back (no duplicate identities): OK');
+  await page.click('#user-chip'); await sleep(150); // close menu
+
   await page.click('#new-tour-btn');
 
   // Directory lookup by nickname fills the first empty slot.

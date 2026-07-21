@@ -3020,10 +3020,22 @@ async function saveNickname() {
   if (!session) return;
   const v = document.getElementById('menu-nick').value.trim().slice(0, 20);
   db.profile = db.profile || {};
+  const prev = db.profile.nickname || null;
   db.profile.nickname = v || null;
   pulling = true; try { saveDb(); } finally { pulling = false; }
   const status = await profilePush();
-  showToast(t(status === 409 ? 'nickTaken' : 'nickSaved'));
+  if (status === 409) {
+    // The server rejected it (nickname already taken by another account) —
+    // roll the local value back so this device doesn't think it owns a
+    // nickname the server never stored.
+    db.profile.nickname = prev;
+    pulling = true; try { saveDb(); } finally { pulling = false; }
+    const input = document.getElementById('menu-nick');
+    if (input) input.value = prev || '';
+    showToast(t('nickTaken'));
+    return;
+  }
+  showToast(t('nickSaved'));
 }
 
 async function cloudPull() {
