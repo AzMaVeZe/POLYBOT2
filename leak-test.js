@@ -24,6 +24,7 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   await sleep(500);
   await page.click('#new-tour-btn');
   for (let i = 0; i < 4; i++) await page.fill('#p' + i, ['Tsadok', 'Tamar', 'Lea', 'Ariel'][i]);
+  await (await page.$$('.me-toggle'))[0].click(); // claim slot 0 → creates claims/links/meIndex
   await page.click('#start-btn');
   await page.fill('#scoreA', '20'); await page.click('#save-btn');
   await sleep(1500);
@@ -38,6 +39,20 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   if (aRows !== 1) throw new Error('cloud should have 1 row for A, got ' + aRows);
   if (!s.rows.some(r => r.is_public)) throw new Error('share-live should mark the row public');
   console.log('User A created a tournament and shared it publicly (local + cloud): OK');
+
+  // ---- The public payload must be scrubbed of ALL account-linked fields ----
+  // A claimed slot 0, so the raw row carries claims/links/meIndex (opaque uids).
+  const pubTid = s.rows.find(r => r.is_public).id;
+  const pub = await page.evaluate(async (tid) => {
+    const r = await fetch('http://localhost:9021/rest/v1/rpc/get_public_tournament', {
+      method: 'POST', headers: { apikey: 'k', 'Content-Type': 'application/json' }, body: JSON.stringify({ tid }),
+    });
+    return r.json();
+  }, pubTid);
+  for (const leaky of ['claims', 'meIndex', 'links']) {
+    if (pub && leaky in pub) throw new Error('LEAK: public tournament payload still carries "' + leaky + '"');
+  }
+  console.log('Public payload is scrubbed of claims/meIndex/links (no uid leak): OK');
 
   // ---- A signs out on the shared device ----
   await page.click('#user-chip');

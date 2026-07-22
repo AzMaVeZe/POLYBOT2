@@ -29,12 +29,13 @@ create policy own_all on public.tournaments
 -- a SELECT policy. A `using (is_public)` policy would let anyone LIST every
 -- public tournament of every user with one anonymous request; the RPC requires
 -- knowing the exact id (the link token) and returns a single scrubbed row
--- (claims/meIndex — account-linked fields — are stripped server-side).
+-- (claims/meIndex/links — account-linked fields carrying opaque user ids —
+-- are stripped server-side).
 drop policy if exists public_read on public.tournaments;
 create or replace function public.get_public_tournament(tid text)
 returns jsonb
 language sql stable security definer set search_path = public as $$
-  select (data - 'claims') - 'meIndex'
+  select ((data - 'claims') - 'meIndex') - 'links'
   from public.tournaments
   where id = tid and is_public = true
 $$;

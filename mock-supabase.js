@@ -355,7 +355,7 @@ const server = http.createServer((req, res) => {
       const r = tid && rows[tid];
       if (!(r && r.is_public)) return json(res, 200, null);
       const scrubbed = Object.assign({}, r.data);
-      delete scrubbed.claims; delete scrubbed.meIndex;
+      delete scrubbed.claims; delete scrubbed.meIndex; delete scrubbed.links;
       return json(res, 200, scrubbed);
     }
 

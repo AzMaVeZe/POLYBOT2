@@ -682,6 +682,12 @@
       <h2 id="mystats-title"></h2>
       <div id="mystats-body"></div>
     </div>
+    <div class="card hidden" id="home-friends-card">
+      <h2 id="home-friends-title"></h2>
+      <div class="hint" id="home-friends-hint" style="text-align:start"></div>
+      <div id="home-friends-list"></div>
+      <button type="button" class="secondary" onclick="gotoFriends()" id="home-friends-btn"></button>
+    </div>
     <div class="card" id="alltime-card">
       <h2 id="alltime-title"></h2>
       <table>
@@ -1090,6 +1096,7 @@ const STR = {
     friendAlready: 'כבר חברים 🙂',
     friendPending: 'בקשה כבר ממתינה לאישור',
     friendSent: '✓ בקשת החברות נשלחה',
+    friendAutoSent: '✓ נשלחה בקשת חברות — כשהיא תאושר, המשחקים המשותפים ייספרו בטבלה',
     friendAccepted: 'עכשיו אתם חברים 🎉',
     friendDeclined: 'הבקשה נדחתה',
     friendSearchErr: 'משהו השתבש — נסו שוב',
@@ -1097,6 +1104,9 @@ const STR = {
     friendDecline: 'דחייה',
     friendsLbTitle: '⚡ פעילות בין חברים',
     friendsLbHint: 'ניקוד לפי שימוש באפליקציה — לא לפי ניצחונות בטורניר.',
+    homeFriendsTitle: '🏆 טבלת החברים',
+    homeFriendsHint: 'דירוג משותף של כל החברים המחוברים — לפי משחקים אמיתיים ששיחקתם.',
+    homeFriendsBtn: 'ניהול חברים',
     friendsLbTitles: 'תארים',
     friendsLbWins: 'ניצחונות',
     friendsEmptyHint: 'עוד אין לכם חברים בפדלזיט — הזמינו חברים כדי לראות דירוג משותף.',
@@ -1283,6 +1293,7 @@ const STR = {
     friendAlready: 'Already friends 🙂',
     friendPending: 'A request is already pending',
     friendSent: '✓ Friend request sent',
+    friendAutoSent: '✓ Friend request sent — once accepted, your shared games count on the leaderboard',
     friendAccepted: "You're friends now 🎉",
     friendDeclined: 'Request declined',
     friendSearchErr: 'Something went wrong — try again',
@@ -1290,6 +1301,9 @@ const STR = {
     friendDecline: 'Decline',
     friendsLbTitle: '⚡ Friend activity',
     friendsLbHint: 'Points from using the app — not tournament win/loss.',
+    homeFriendsTitle: '🏆 Friends table',
+    homeFriendsHint: 'A shared ranking of everyone you\'re connected to — by the real games you played.',
+    homeFriendsBtn: 'Manage friends',
     friendsLbTitles: 'titles',
     friendsLbWins: 'wins',
     friendsEmptyHint: "You don't have any PadelZit friends yet — invite some to see a shared leaderboard.",
@@ -1387,6 +1401,17 @@ function sanitizeTournament(x) {
       // versions keyed claims by email, and that must never sync or publish again.
       if (typeof k === 'string' && k.length <= 254 && k.indexOf('@') === -1 &&
           Number.isInteger(v) && v >= 0 && v < n) tour.claims[k] = v;
+    });
+  }
+  // Links: { uid: playerIndex } — EVERY registered player linked to a slot,
+  // friend or not. Kept so a game can be credited retroactively once a
+  // friendship is confirmed. Same validation as claims (opaque ids, no emails).
+  tour.links = {};
+  if (x.links && typeof x.links === 'object') {
+    Object.keys(x.links).forEach(k => {
+      const v = x.links[k];
+      if (typeof k === 'string' && k.length <= 254 && k.indexOf('@') === -1 &&
+          Number.isInteger(v) && v >= 0 && v < n) tour.links[k] = v;
     });
   }
   const validTeams = g => {
@@ -1780,6 +1805,9 @@ function applyLang() {
   set('menu-delete', 'deleteAccount');
   set('privacy-link', 'privacyLink');
   set('mystats-title', 'myStatsTitle');
+  set('home-friends-title', 'homeFriendsTitle');
+  set('home-friends-hint', 'homeFriendsHint');
+  set('home-friends-btn', 'homeFriendsBtn');
   set('lformat', 'formatLabel');
   set('fmt-hint', 'fmtHint');
   set('share-link-title', 'shareLinkTitle');
@@ -2065,6 +2093,9 @@ async function dirFind() {
     renderSetup();
     document.getElementById('dir-q').value = '';
     out.textContent = t('dirFound') + ': ' + display + (hit.nickname ? ' (' + hit.nickname + ')' : '');
+    // Added by exact email and not connected yet → start the friendship so
+    // future (and past) games together land on the shared leaderboard.
+    if (q.indexOf('@') !== -1 && !isFriendUid(hit.uid)) autoFriendRequest(q, hit.uid);
   } catch (e) { out.textContent = t('dirErr'); }
 }
 
@@ -2087,7 +2118,10 @@ async function startTournament() {
         const res = await sbFetch('/rest/v1/rpc/find_player', { method: 'POST', body: JSON.stringify({ q: names[i] }) });
         if (res.ok) {
           const hit = await res.json();
-          if (hit && hit.uid) m = { n: (hit.nickname || hit.name || names[i].split('@')[0]).slice(0, 40), nick: hit.nickname, em: names[i].toLowerCase(), uid: hit.uid };
+          if (hit && hit.uid) {
+            m = { n: (hit.nickname || hit.name || names[i].split('@')[0]).slice(0, 40), nick: hit.nickname, em: names[i].toLowerCase(), uid: hit.uid };
+            if (!isFriendUid(hit.uid)) autoFriendRequest(names[i].toLowerCase(), hit.uid);
+          }
         }
       } catch (e) { /* offline — keep anonymous */ }
     }
@@ -2105,13 +2139,19 @@ async function startTournament() {
   if (unique.size < names.length) { err.textContent = t('errUnique'); return; }
   const tour = newTournamentObj(names, targetPoints, setupFormat);
   tour.claims = {};
+  tour.links = {};
   // Attribution requires mutual consent: only self or a confirmed friend gets
-  // stats/leaderboard credit. A registered-but-not-yet-friend match still
-  // supplied the correct display name above — it just stays unattributed.
-  links.forEach((uid, i) => { if (uid && isFriendUid(uid)) tour.claims[uid] = i; });
+  // stats/leaderboard credit right now. But we remember EVERY linked registered
+  // player in tour.links, so if you become friends later the past games are
+  // credited retroactively at the next sync (reconcileClaims).
+  links.forEach((uid, i) => {
+    if (!uid) return;
+    tour.links[uid] = i;
+    if (isFriendUid(uid)) tour.claims[uid] = i;
+  });
   if (setupMe !== null && setupMe < names.length) {
     tour.meIndex = setupMe;                                    // local "this is me" (star)
-    if (session) tour.claims[session.user.id] = setupMe;       // account-linked personal stats (opaque id, never email)
+    if (session) { tour.claims[session.user.id] = setupMe; tour.links[session.user.id] = setupMe; } // opaque id, never email
   }
   db.tournaments.unshift(tour);
   db.lastPlayers = names.slice();
@@ -2851,6 +2891,23 @@ function computeEngagementStats(tour) {
     .map(([uid, s]) => ({ uid, played: s.played, won: s.won, champion: s.champion }));
 }
 
+// Promote linked-but-unclaimed registered players into claims once they become
+// confirmed friends — so games you played together BEFORE connecting still get
+// credited on the shared leaderboard at the next sync. Returns true if changed.
+function reconcileClaims() {
+  let changed = false;
+  db.tournaments.forEach(tour => {
+    if (!tour.links) return;
+    tour.claims = tour.claims || {};
+    Object.keys(tour.links).forEach(uid => {
+      const idx = tour.links[uid];
+      if (isFriendUid(uid) && tour.claims[uid] !== idx) { tour.claims[uid] = idx; changed = true; }
+    });
+  });
+  if (changed) { pulling = true; try { saveDb(); } finally { pulling = false; } }
+  return changed;
+}
+
 async function pushEngagementStats() {
   const withClaims = db.tournaments.filter(tr => tr.claims && Object.keys(tr.claims).length && !tr.liveGuest);
   for (const tr of withClaims) {
@@ -2935,6 +2992,22 @@ async function requestFriendByEmail() {
     out.textContent = t(key);
     if (status === 'sent' || status === 'accepted') { input.value = ''; await fetchFriendState(); renderFriends(); }
   } catch (e) { out.textContent = t('friendSearchErr'); }
+}
+
+// When you link a registered player by their EXACT email to a game and you
+// aren't connected yet, quietly open a friend request. That handshake is what
+// turns shared games into a shared leaderboard once they accept — without it,
+// adding an email to a game credits nobody.
+async function autoFriendRequest(email, uid) {
+  if (!session || !email || email.indexOf('@') === -1) return;
+  if (uid && isFriendUid(uid)) return;
+  try {
+    const res = await sbFetch('/rest/v1/rpc/request_friend', { method: 'POST', body: JSON.stringify({ target_email: email }) });
+    if (!res.ok) return;
+    const status = await res.json();
+    if (status === 'sent') showToast(t('friendAutoSent'));
+    else if (status === 'accepted') { await fetchFriendState(); updateFriendsBadge(); showToast(t('friendAccepted')); }
+  } catch (e) { /* best-effort — the game still records the link for later */ }
 }
 
 async function respondFriendRequest(requesterUid, accept) {
@@ -3092,6 +3165,7 @@ async function syncNow(alsoPull) {
   renderCloud();
   try {
     if (alsoPull !== false) { await cloudPull(); await profilePull(); await fetchFriendState(); }
+    reconcileClaims();          // credit past games with players who are now friends
     await cloudPush();
     await profilePush();
     await pushEngagementStats();
@@ -3103,6 +3177,7 @@ async function syncNow(alsoPull) {
   renderCloud();
   updateFriendsBadge();               // menu label + avatar dot, on every screen
   if (view === 'friends') renderFriends();
+  else if (view === 'home') renderHome();   // refresh the home shared table after a sync
 }
 
 function scheduleCloudPush() {
@@ -3262,7 +3337,7 @@ function liveToken() {
 // Public payloads never carry account/device-linked fields.
 function scrubForPublic(tour) {
   const c = JSON.parse(JSON.stringify(tour));
-  delete c.claims; delete c.meIndex; delete c.guestMade; delete c.liveGuest;
+  delete c.claims; delete c.meIndex; delete c.links; delete c.guestMade; delete c.liveGuest;
   return c;
 }
 
@@ -3668,6 +3743,8 @@ function renderHome() {
     } else { myCard.classList.add('hidden'); }
   } else { myCard.classList.add('hidden'); }
 
+  renderHomeFriends();
+
   // All-time leaderboard across every tournament, keyed by player name.
   const agg = {};
   db.tournaments.forEach(tour => {
@@ -3777,37 +3854,54 @@ function renderFriends() {
     fetchFriendsLeaderboard().then(rows => {
       if (view !== 'friends') return; // navigated away while awaiting
       lbList.innerHTML = '';
-      (rows || []).forEach((r, idx) => {
-        const rank = idx + 1;
-        const row = document.createElement('div');
-        row.className = 'friend-row';
-        const badge = document.createElement('span');
-        badge.className = 'rank-badge' + (rank <= 3 ? ' rank-' + rank : '');
-        badge.textContent = rank;
-        const info = document.createElement('div');
-        info.className = 'fname';
-        const isMe = session && r.uid === session.user.id;
-        info.innerHTML = escapeHtml(r.name || r.nickname || t('friendUnnamed')) + (isMe ? ' ⭐' : '');
-        const sub = document.createElement('div');
-        sub.className = 'fsub';
-        sub.textContent = (r.titles > 0 ? '🏆' + r.titles + ' ' + t('friendsLbTitles') + ' · ' : '') +
-          r.games_won + ' ' + t('friendsLbWins');
-        info.appendChild(sub);
-        const score = document.createElement('div');
-        score.className = 'fscore';
-        score.textContent = r.month_score;
-        row.appendChild(badge); row.appendChild(info); row.appendChild(score);
-        if (!isMe) {
-          const rm = document.createElement('button');
-          rm.type = 'button'; rm.className = 'friend-unfriend'; rm.setAttribute('aria-label', t('friendDecline'));
-          rm.textContent = '✕';
-          rm.onclick = () => unfriendPlayer(r.uid);
-          row.appendChild(rm);
-        }
-        lbList.appendChild(row);
-      });
+      (rows || []).forEach((r, idx) => lbList.appendChild(friendsLbRowEl(r, idx, true)));
     });
   }
+}
+
+// One leaderboard row. Shared by the Friends screen (allowUnfriend) and the
+// home-screen shared table (read-only). Rank + name + record + monthly score.
+function friendsLbRowEl(r, idx, allowUnfriend) {
+  const rank = idx + 1;
+  const row = document.createElement('div');
+  row.className = 'friend-row';
+  const badge = document.createElement('span');
+  badge.className = 'rank-badge' + (rank <= 3 ? ' rank-' + rank : '');
+  badge.textContent = rank;
+  const info = document.createElement('div');
+  info.className = 'fname';
+  const isMe = session && r.uid === session.user.id;
+  info.innerHTML = escapeHtml(r.name || r.nickname || t('friendUnnamed')) + (isMe ? ' ⭐' : '');
+  const sub = document.createElement('div');
+  sub.className = 'fsub';
+  sub.textContent = (r.titles > 0 ? '🏆' + r.titles + ' ' + t('friendsLbTitles') + ' · ' : '') +
+    r.games_won + ' ' + t('friendsLbWins');
+  info.appendChild(sub);
+  const score = document.createElement('div');
+  score.className = 'fscore';
+  score.textContent = r.month_score;
+  row.appendChild(badge); row.appendChild(info); row.appendChild(score);
+  if (allowUnfriend && !isMe) {
+    const rm = document.createElement('button');
+    rm.type = 'button'; rm.className = 'friend-unfriend'; rm.setAttribute('aria-label', t('friendDecline'));
+    rm.textContent = '✕';
+    rm.onclick = () => unfriendPlayer(r.uid);
+    row.appendChild(rm);
+  }
+  return row;
+}
+
+// The same shared leaderboard, mirrored onto the home screen so both players
+// see it without opening the Friends screen. Shows only once you have a friend.
+function renderHomeFriends() {
+  const card = document.getElementById('home-friends-card');
+  if (!card) return;
+  if (!session || !db.friends || db.friends.length === 0) { card.classList.add('hidden'); return; }
+  card.classList.remove('hidden');
+  const list = document.getElementById('home-friends-list');
+  const paint = rows => { list.innerHTML = ''; (rows || []).forEach((r, idx) => list.appendChild(friendsLbRowEl(r, idx, false))); };
+  if (leaderboardCache) paint(leaderboardCache); else list.innerHTML = '<div class="hint">…</div>';
+  fetchFriendsLeaderboard().then(rows => { if (view === 'home') paint(rows); });
 }
 
 function render() {
