@@ -58,6 +58,11 @@
     display: inline-flex; align-items: center; gap: 4px; border-radius: 999px;
     background: var(--card); border: 1px solid #334155; color: var(--text); font-size: 1.05rem; position: relative; }
   .friends-btn:active { transform: scale(0.96); }
+  .nav-home-btn { width: auto; min-height: 40px; padding: 6px 12px; margin: 0; flex: 0 0 auto;
+    display: inline-flex; align-items: center; gap: 4px; border-radius: 999px;
+    background: var(--card); border: 1px solid #334155; color: var(--text); font-size: 1.05rem; }
+  .nav-home-btn:active { transform: scale(0.96); }
+  .nav-home-label { font-size: 0.9rem; font-weight: 700; }
   .friends-btn-count { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 999px;
     background: var(--red); color: #fff; font-size: 0.72rem; font-weight: 800;
     display: inline-flex; align-items: center; justify-content: center; }
@@ -72,6 +77,7 @@
     padding: 5px 12px 5px 5px;
     cursor: pointer;
     max-width: 62%;
+    min-width: 0;
   }
   #user-chip .avatar {
     width: 28px; height: 28px;
@@ -96,7 +102,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    min-width: 0;
   }
+  /* On phones the top bar carries Home + chip + Friends + language; drop the
+     email text from the chip (the avatar initial identifies the account, and
+     the full address shows in the account menu) so nothing has to truncate. */
+  @media (max-width: 480px) { #user-chip .user-email { display: none; } }
   #user-chip .sync-dot { width: 8px; height: 8px; border-radius: 50%; flex: 0 0 auto; }
   .sync-dot.ok { background: var(--green); }
   .sync-dot.syncing { background: var(--gold); }
@@ -613,6 +624,9 @@
 <body>
 <div class="container">
   <div class="topbar">
+    <button type="button" class="nav-home-btn hidden" id="nav-home-btn" onclick="gotoHome()" aria-label="">
+      <span aria-hidden="true">🏠</span><span class="nav-home-label" id="nav-home-label"></span>
+    </button>
     <div id="user-chip" class="hidden" onclick="toggleUserMenu()" onkeydown="chipKey(event)" role="button" tabindex="0" aria-haspopup="menu" aria-expanded="false" aria-controls="user-menu">
       <span class="avatar-wrap">
         <span class="avatar" id="user-avatar" aria-hidden="true">👤</span>
@@ -1048,6 +1062,8 @@ const STR = {
     oauthErr: 'ההתחברות נכשלה. ודאו שהספק מוגדר ב־Supabase.',
     cloudLogout: '🚪 התנתקות',
     menuAccountTitle: '👤 החשבון שלי',
+    navHome: 'בית',
+    navHomeAria: 'חזרה למסך הבית',
     cloudSyncBtn: '🔄 סנכרון עכשיו',
     cloudSynced: 'מחובר: {n} · מסונכרן ✓',
     cloudSyncing: 'מחובר: {n} · מסנכרן…',
@@ -1249,6 +1265,8 @@ const STR = {
     oauthErr: 'Sign-in failed. Make sure the provider is enabled in Supabase.',
     cloudLogout: '🚪 Sign out',
     menuAccountTitle: '👤 My account',
+    navHome: 'Home',
+    navHomeAria: 'Back to home screen',
     cloudSyncBtn: '🔄 Sync now',
     cloudSynced: 'Signed in: {n} · synced ✓',
     cloudSyncing: 'Signed in: {n} · syncing…',
@@ -1846,6 +1864,8 @@ function applyLang() {
   set('cloud-open-btn', 'cloudOpenBtn');
   set('cloud-close-btn', 'cloudCloseBtn');
   set('target-hint', 'targetHint');
+  set('nav-home-label', 'navHome');
+  { const nh = document.getElementById('nav-home-btn'); if (nh) nh.setAttribute('aria-label', t('navHomeAria')); }
   set('user-menu-title', 'menuAccountTitle');
   set('lmenu-nick', 'nickLabel');
   set('menu-nick-hint', 'nickHint');
@@ -3944,6 +3964,10 @@ function render() {
   activeEl.classList.remove('screen-in');
   void activeEl.offsetWidth;
   activeEl.classList.add('screen-in');
+  // Always-visible top-bar Home button on every screen except home itself, so
+  // "back" never requires scrolling to the bottom of a long screen.
+  const navHome = document.getElementById('nav-home-btn');
+  if (navHome) navHome.classList.toggle('hidden', view === 'home');
   renderCloud(); // keep the user chip / cloud card correct on every screen
   if (view === 'home') renderHome();
   else if (view === 'setup') renderSetup();
