@@ -200,8 +200,18 @@
     margin-bottom: 16px;
     box-shadow: 0 8px 20px rgba(0,0,0,0.35);
   }
+  #user-menu .menu-title { font-weight: 800; font-size: 1.05rem; margin-bottom: 4px; }
   #user-menu .menu-status { color: var(--muted); font-size: 0.85rem; margin-bottom: 10px; }
+  #user-menu #menu-nick-hint { margin: 2px 0 4px; font-size: 0.78rem; }
   #user-menu button { margin-top: 8px; }
+  .menu-sep { border: 0; border-top: 1px solid #334155; margin: 12px 0 2px; }
+  #user-menu .danger { font-weight: 600; }
+  .chip-caret { font-size: 0.7rem; color: var(--muted); flex: 0 0 auto; transition: transform 0.15s ease; }
+  #user-chip[aria-expanded="true"] .chip-caret { transform: rotate(180deg); }
+  .screen-title { font-size: 1.4rem; font-weight: 800; text-align: start; margin: 0 0 14px; }
+  .linklike { background: none; border: 0; color: var(--muted); font-size: 0.85rem; text-decoration: underline;
+    padding: 6px; margin-top: 6px; width: auto; min-height: 0; cursor: pointer; }
+  .linklike:hover { color: var(--text); }
   .lang-btn {
     width: auto;
     padding: 10px 16px;
@@ -610,6 +620,7 @@
       </span>
       <span class="user-email" id="user-email"></span>
       <span class="sync-dot ok" id="sync-dot" role="img" aria-label=""></span>
+      <span class="chip-caret" aria-hidden="true">▾</span>
     </div>
     <button type="button" class="friends-btn hidden" id="friends-btn" onclick="gotoFriends()" aria-haspopup="true">
       <span aria-hidden="true">👥</span>
@@ -618,15 +629,18 @@
     <button type="button" class="lang-btn" id="lang-btn" onclick="toggleLang()">English</button>
   </div>
   <div id="user-menu" class="hidden">
+    <div class="menu-title" id="user-menu-title"></div>
     <div class="menu-status" id="user-menu-status" aria-live="polite"></div>
     <label for="menu-nick" id="lmenu-nick"></label>
     <div class="inline-row">
       <input type="text" id="menu-nick" maxlength="20" autocomplete="off">
       <button type="button" class="secondary" onclick="saveNickname()" id="menu-nick-save"></button>
     </div>
+    <div class="hint" id="menu-nick-hint" style="text-align:start"></div>
     <button type="button" class="secondary" onclick="gotoFriends()" id="menu-friends"></button>
     <button type="button" class="secondary" onclick="syncNow(true)" id="menu-sync" style="margin-top:0"></button>
     <button type="button" class="secondary" onclick="cloudLogout()" id="menu-logout"></button>
+    <hr class="menu-sep">
     <button type="button" class="secondary danger" onclick="deleteAccountAsk()" id="menu-delete"></button>
   </div>
   <h1 id="brand-h1"><span class="title-ball" aria-hidden="true"></span><span id="app-title">פאדלז׳יט</span></h1>
@@ -675,6 +689,7 @@
         <div class="error-msg" id="cloud-error" role="alert"></div>
         <button type="button" onclick="cloudLogin()" id="cloud-login-btn"></button>
         <button type="button" class="secondary" onclick="cloudSignup()" id="cloud-signup-btn"></button>
+        <button type="button" class="linklike" onclick="toggleCloudForm(false)" id="cloud-close-btn"></button>
         </div>
       </div>
     </div>
@@ -869,12 +884,23 @@
 
   <!-- FRIENDS SCREEN -->
   <div id="friends-screen" class="hidden">
+    <h1 class="screen-title" id="friends-screen-title"></h1>
     <div id="invite-confirm-card" class="card hidden">
       <div class="error-msg" id="invite-confirm-text"></div>
       <div class="confirm-row">
         <button onclick="acceptPendingInvite()" id="invite-accept-btn"></button>
         <button class="secondary" onclick="dismissPendingInvite()" id="invite-dismiss-btn"></button>
       </div>
+    </div>
+    <div class="card hidden" id="friends-lb-card">
+      <h2 id="friends-lb-title"></h2>
+      <div class="hint" id="friends-lb-hint" style="text-align:start"></div>
+      <div id="friends-lb-list"></div>
+    </div>
+    <div class="hint hidden" id="friends-empty-hint" style="text-align:center"></div>
+    <div class="card hidden" id="pending-card">
+      <h2 id="pending-title"></h2>
+      <div id="pending-list"></div>
     </div>
     <div class="card" id="friend-invite-card">
       <h2 id="friend-invite-title"></h2>
@@ -885,10 +911,6 @@
         <button type="button" class="secondary" onclick="copyFriendInviteLink()" id="friend-invite-copy"></button>
       </div>
     </div>
-    <div class="card hidden" id="pending-card">
-      <h2 id="pending-title"></h2>
-      <div id="pending-list"></div>
-    </div>
     <div class="card" id="friend-search-card">
       <h2 id="friend-search-title"></h2>
       <label for="friend-email" id="lfriend-email"></label>
@@ -898,12 +920,6 @@
       </div>
       <div class="hint" id="friend-search-result" style="text-align:start" aria-live="polite"></div>
     </div>
-    <div class="card hidden" id="friends-lb-card">
-      <h2 id="friends-lb-title"></h2>
-      <div class="hint" id="friends-lb-hint" style="text-align:start"></div>
-      <div id="friends-lb-list"></div>
-    </div>
-    <div class="hint hidden" id="friends-empty-hint" style="text-align:center"></div>
     <button class="secondary" onclick="gotoHome()" id="friends-back-btn"></button>
   </div>
 </div>
@@ -986,7 +1002,7 @@ const STR = {
     viewPodium: 'תוצאות',
     del: 'מחיקה',
     delConfirm: 'בטוח למחוק?',
-    alltime: '🏅 טבלת האלופים (כל הטורנירים)',
+    alltime: '🏅 אלופי כל הזמנים (במכשיר זה)',
     athPlayer: 'שחקן', athTitles: '🏆', athPoints: 'נקודות', athGames: 'משחקים', athWon: 'ניצחונות',
     setupTitle: 'שמות השחקנים',
     countLabel: 'מספר שחקנים (עם 8 ומעלה — שני מגרשים במקביל)',
@@ -1016,6 +1032,7 @@ const STR = {
     cloudTitle: '☁️ חשבון ענן',
     cloudHint: 'התחברות שומרת את כל הטורנירים בענן ומסנכרנת אוטומטית בין המכשירים שלך. אפשר להמשיך גם בלי חשבון — הכול יישמר במכשיר.',
     cloudOpenBtn: '✉️ כניסה עם אימייל',
+    cloudCloseBtn: '▲ הסתרת טופס האימייל',
     loginCta: 'התחברות / הרשמה',
     targetHint: 'טיפ: יעד אי־זוגי (למשל 21) מונע תיקו.',
     guestNote: 'לא מחובר/ת. המשחקים נשמרים על המכשיר הזה בלבד.',
@@ -1029,7 +1046,8 @@ const STR = {
     facebookBtn: 'המשך עם Facebook',
     appleBtn: 'המשך עם Apple',
     oauthErr: 'ההתחברות נכשלה. ודאו שהספק מוגדר ב־Supabase.',
-    cloudLogout: 'התנתקות',
+    cloudLogout: '🚪 התנתקות',
+    menuAccountTitle: '👤 החשבון שלי',
     cloudSyncBtn: '🔄 סנכרון עכשיו',
     cloudSynced: 'מחובר: {n} · מסונכרן ✓',
     cloudSyncing: 'מחובר: {n} · מסנכרן…',
@@ -1066,12 +1084,13 @@ const STR = {
     gameDeleted: 'המשחק נמחק והדירוג עודכן',
     swapPick: 'בחרו שחקן שני להחלפה (הקשה חוזרת מבטלת)',
     swapDone: 'ההרכב עודכן',
-    nickLabel: 'כינוי (מאפשר לחברים לאתר אתכם ולשבץ אתכם בטורניר)',
+    nickLabel: 'כינוי',
+    nickHint: 'מאפשר לחברים לאתר אתכם ולשבץ אתכם בטורניר',
     nickSaveBtn: 'שמירה',
     nickSaved: 'הכינוי נשמר',
     nickTaken: 'הכינוי תפוס — נסו כינוי אחר',
     rosterHint: 'שם מהרשימה שלכם מזוהה אוטומטית. לשחקן רשום אחר — הוסיפו לפי מייל, כינוי או שם מלא. כל שם אחר נשאר אנונימי.',
-    dirLabel: 'הוספת שחקן רשום (מייל, כינוי או שם מלא מדויק)',
+    dirLabel: 'שיבוץ שחקן רשום (חבר לפי מייל/כינוי) — נזקף גם לחשבון שלו',
     dirBtn: 'איתור',
     dirFound: 'נמצא ושובץ',
     dirNotFound: 'לא נמצא שחקן רשום עם המייל/כינוי הזה',
@@ -1082,6 +1101,7 @@ const STR = {
     menuFriends: '👥 חברים',
     menuFriendsBadge: '👥 חברים ({n})',
     friendsBackBtn: 'חזרה',
+    friendsScreenTitle: '👥 חברים',
     friendInviteTitle: '🔗 הזמנת חבר/ה',
     friendInviteBtn: 'הזמנת חבר/ה לפדלזיט',
     friendInviteOn: '✓ הקישור שלכם מוכן — שלחו אותו כדי להתחבר כחברים',
@@ -1102,10 +1122,10 @@ const STR = {
     friendSearchErr: 'משהו השתבש — נסו שוב',
     friendAccept: 'אישור',
     friendDecline: 'דחייה',
-    friendsLbTitle: '⚡ פעילות בין חברים',
-    friendsLbHint: 'ניקוד לפי שימוש באפליקציה — לא לפי ניצחונות בטורניר.',
+    friendsLbTitle: '🏆 טבלת החברים',
+    friendsLbHint: 'דירוג החברים המחוברים לפי נקודות ממשחקים אמיתיים (משחקים, ניצחונות ותארים).',
     homeFriendsTitle: '🏆 טבלת החברים',
-    homeFriendsHint: 'דירוג משותף של כל החברים המחוברים — לפי משחקים אמיתיים ששיחקתם.',
+    homeFriendsHint: 'דירוג החברים המחוברים לפי נקודות ממשחקים אמיתיים (משחקים, ניצחונות ותארים).',
     homeFriendsBtn: 'ניהול חברים',
     friendsLbTitles: 'תארים',
     friendsLbWins: 'ניצחונות',
@@ -1183,7 +1203,7 @@ const STR = {
     viewPodium: 'Results',
     del: 'Delete',
     delConfirm: 'Sure?',
-    alltime: '🏅 All-time leaderboard (all tournaments)',
+    alltime: '🏅 All-time champions (this device)',
     athPlayer: 'Player', athTitles: '🏆', athPoints: 'Points', athGames: 'Games', athWon: 'Won',
     setupTitle: 'Player names',
     countLabel: 'Number of players (8+ fills two courts in parallel)',
@@ -1213,6 +1233,7 @@ const STR = {
     cloudTitle: '☁️ Cloud account',
     cloudHint: 'Signing in saves all tournaments to the cloud and syncs them across your devices. You can keep playing without an account — everything stays on this device.',
     cloudOpenBtn: '✉️ Sign in with email',
+    cloudCloseBtn: '▲ Hide email form',
     loginCta: 'Sign in / Sign up',
     targetHint: 'Tip: an odd target (e.g. 21) rules out ties.',
     guestNote: 'Not signed in. Games are saved on this device only.',
@@ -1226,7 +1247,8 @@ const STR = {
     facebookBtn: 'Continue with Facebook',
     appleBtn: 'Continue with Apple',
     oauthErr: 'Sign-in failed. Make sure the provider is enabled in Supabase.',
-    cloudLogout: 'Sign out',
+    cloudLogout: '🚪 Sign out',
+    menuAccountTitle: '👤 My account',
     cloudSyncBtn: '🔄 Sync now',
     cloudSynced: 'Signed in: {n} · synced ✓',
     cloudSyncing: 'Signed in: {n} · syncing…',
@@ -1263,12 +1285,13 @@ const STR = {
     gameDeleted: 'Game deleted, standings updated',
     swapPick: 'Pick a second player to swap (tap again to cancel)',
     swapDone: 'Matchup updated',
-    nickLabel: 'Nickname (lets friends find you and add you to a tournament)',
+    nickLabel: 'Nickname',
+    nickHint: 'Lets friends find and add you to tournaments',
     nickSaveBtn: 'Save',
     nickSaved: 'Nickname saved',
     nickTaken: 'Nickname taken — try another',
     rosterHint: 'Names from your list are recognized automatically. Add another registered player by email, nickname, or full name. Any other name stays anonymous.',
-    dirLabel: 'Add a registered player (exact email, nickname, or full name)',
+    dirLabel: 'Add a registered player (friend by email/nickname) — counts on their account too',
     dirBtn: 'Find',
     dirFound: 'Found and added',
     dirNotFound: 'No registered player with that email/nickname',
@@ -1279,6 +1302,7 @@ const STR = {
     menuFriends: '👥 Friends',
     menuFriendsBadge: '👥 Friends ({n})',
     friendsBackBtn: 'Back',
+    friendsScreenTitle: '👥 Friends',
     friendInviteTitle: '🔗 Invite a friend',
     friendInviteBtn: 'Invite a friend to PadelZit',
     friendInviteOn: '✓ Your link is ready — send it to become friends',
@@ -1299,10 +1323,10 @@ const STR = {
     friendSearchErr: 'Something went wrong — try again',
     friendAccept: 'Accept',
     friendDecline: 'Decline',
-    friendsLbTitle: '⚡ Friend activity',
-    friendsLbHint: 'Points from using the app — not tournament win/loss.',
+    friendsLbTitle: '🏆 Friends leaderboard',
+    friendsLbHint: 'Ranking of your connected friends by points from real games (games, wins, titles).',
     homeFriendsTitle: '🏆 Friends table',
-    homeFriendsHint: 'A shared ranking of everyone you\'re connected to — by the real games you played.',
+    homeFriendsHint: 'Ranking of your connected friends by points from real games (games, wins, titles).',
     homeFriendsBtn: 'Manage friends',
     friendsLbTitles: 'titles',
     friendsLbWins: 'wins',
@@ -1820,14 +1844,18 @@ function applyLang() {
   set('live-wa', 'waShare');
   set('live-copy', 'copyLink');
   set('cloud-open-btn', 'cloudOpenBtn');
+  set('cloud-close-btn', 'cloudCloseBtn');
   set('target-hint', 'targetHint');
+  set('user-menu-title', 'menuAccountTitle');
   set('lmenu-nick', 'nickLabel');
+  set('menu-nick-hint', 'nickHint');
   set('menu-nick-save', 'nickSaveBtn');
   set('roster-hint', 'rosterHint');
   set('ldir-q', 'dirLabel');
   set('dir-btn', 'dirBtn');
   set('live-stop', 'liveStop');
   set('friends-back-btn', 'friendsBackBtn');
+  set('friends-screen-title', 'friendsScreenTitle');
   set('friend-invite-title', 'friendInviteTitle');
   set('friend-invite-btn', 'friendInviteBtn');
   set('friend-invite-on', 'friendInviteOn');
@@ -3783,13 +3811,14 @@ function renderHome() {
   }
 }
 
-// Small red dot on the avatar whenever there's something to act on, regardless
-// of which screen is currently showing.
+// Pending friend requests surface in ONE place: the count on the top-bar
+// Friends button. (The chip's avatar dot was a redundant second signal — the
+// chip now means "my account" only, so it stays hidden.)
 function updateFriendsBadge() {
   const n = session ? db.pendingIncoming.length : 0;
   const dot = document.getElementById('chip-badge-dot');
-  if (dot) dot.classList.toggle('hidden', n === 0);
-  // Primary indicator: the always-visible top-bar Friends button.
+  if (dot) dot.classList.add('hidden');
+  // Primary (and only) indicator: the always-visible top-bar Friends button.
   const fbtn = document.getElementById('friends-btn');
   if (fbtn) fbtn.classList.toggle('hidden', !session);
   const count = document.getElementById('friends-btn-count');

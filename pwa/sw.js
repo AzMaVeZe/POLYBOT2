@@ -1,6 +1,6 @@
 // PadelZit service worker — caches the app shell for offline use.
 // Cross-origin requests (e.g. Supabase cloud sync) are never intercepted.
-const CACHE = 'padelzit-v8';
+const CACHE = 'padelzit-v9';
 const SHELL = [
   './',
   './index.html',
