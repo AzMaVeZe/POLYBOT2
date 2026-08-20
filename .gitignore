@@ -1,2 +1,6 @@
 # Claude Code local state (worktrees, session scratch) — never part of the app.
 .claude/
+
+# Local-only account/login reference — has real personal emails, this repo is
+# public, never commit it. See ACCOUNTS.md for the public-safe version.
+ACCOUNTS.local.md

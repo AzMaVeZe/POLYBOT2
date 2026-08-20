@@ -53,6 +53,14 @@ build (aapt + dx + apksigner, no Android Studio). The bundled keystore is a
 hobby signing key for personal distribution — replace it with a private key
 before any store upload.
 
+## Accounts & services
+
+See [`ACCOUNTS.md`](ACCOUNTS.md) for which external service (GitHub, domain
+registrar, Supabase, OAuth providers, ...) is tied to which account. That file
+is redacted since this repo is public; the full version with real logins is
+`ACCOUNTS.local.md` on the maintainer's machine (gitignored, never committed).
+Update both together whenever a service is added or an account changes.
+
 ## Roadmap
 
 - Live shared tournament view (realtime leaderboard for all participants)
