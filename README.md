@@ -45,13 +45,22 @@ You get a home-screen icon, a full-screen app (no browser bars), and offline use
 PWA assets live in `pwa/` (manifest, service worker, icons) and are published
 alongside `index.html` by the Pages workflow.
 
-## Android APK
+## Android app (Google Play)
 
-The `android/` folder wraps the app in a native WebView for direct installation
-on Android (sideload). See `android/build-apk.sh` for the full toolchain-free
-build (aapt + dx + apksigner, no Android Studio). The bundled keystore is a
-hobby signing key for personal distribution — replace it with a private key
-before any store upload.
+The Android build is a **Trusted Web Activity** — a thin native wrapper that
+opens the live site fullscreen (no address bar) and picks up every web deploy
+automatically, so shipping app content never needs a store review.
+
+- Config: `twa/twa-manifest.json` (Bubblewrap, package `app.azma.padel`).
+- Build: run the **Build Android app (TWA)** workflow from the Actions tab; it
+  produces a signed `.aab` for Play plus an `.apk` for sideload testing.
+- Ownership proof: `pwa/.well-known/assetlinks.json`, published to
+  `https://padel.azma.app/.well-known/assetlinks.json` by the Pages workflow.
+  Without a matching fingerprint there, the app shows a URL bar.
+- Step-by-step release instructions: [`PLAY.md`](PLAY.md).
+
+Signing keys are never committed — the upload key lives only in the
+`ANDROID_KEYSTORE_BASE64` repository secret.
 
 ## Accounts & services
 

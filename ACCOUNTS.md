@@ -15,5 +15,5 @@ on the maintainer's machine, which is gitignored and never pushed.
 | Supabase | Cloud backend: auth, Postgres, RLS/RPCs (`cloud/setup.sql`) | Org "AzMaVeZe's Org" (`pvudwkmqgftdonrmycnw`), project "PadelZit" (`axrugdszycwmadbdwolx`), region eu-central-2, free plan | TBD — confirm | Likely the same GitHub-linked identity as above (unconfirmed — Supabase's API doesn't expose a billing/owner email). |
 | Google OAuth | "Continue with Google" sign-in (Google Cloud Console OAuth client, wired into Supabase Auth) | TBD — confirm | TBD — confirm | |
 | Facebook OAuth | "Continue with Facebook" sign-in (Meta for Developers app, wired into Supabase Auth) | TBD — confirm | TBD — confirm | |
-| Google Play Console | Planned: publishing the Android app (Trusted Web Activity) | TBD — confirm | TBD — confirm | Not yet published; see the TWA plan when it ships. |
+| Google Play Console | Publishing the Android app (Trusted Web Activity, package `app.azma.padel`) | TBD — confirm | TBD — confirm | Release steps in `PLAY.md`. Upload key lives only in the `ANDROID_KEYSTORE_BASE64` repo secret. |
 | WhatsApp | *(not an account)* Share links use the public `wa.me/?text=...` URL format | — | — | No login involved; listed only so it isn't mistaken for a tracked account. |

@@ -1,0 +1,132 @@
+name: Build Android app (TWA)
+
+# Builds the Trusted Web Activity wrapper around https://padel.azma.app as a
+# signed .aab (for Play) plus a .apk (for sideload testing). Run it by hand from
+# the Actions tab — the web app itself deploys separately and needs no rebuild.
+#
+# Requires four repository secrets (see PLAY.md):
+#   ANDROID_KEYSTORE_BASE64   base64 of your upload.jks
+#   ANDROID_KEYSTORE_PASSWORD store password
+#   ANDROID_KEY_ALIAS         key alias (PLAY.md uses "padelzit")
+#   ANDROID_KEY_PASSWORD      key password
+on:
+  workflow_dispatch:
+    inputs:
+      versionName:
+        description: 'App version name shown on Play (e.g. 1.0.1)'
+        required: false
+        default: ''
+      versionCode:
+        description: 'Integer version code — must increase on every Play upload'
+        required: false
+        default: ''
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Fail early if signing secrets are missing
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KS_PASS: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASS: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          missing=""
+          [ -z "$KS" ] && missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -z "$KS_PASS" ] && missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -z "$KEY_ALIAS" ] && missing="$missing ANDROID_KEY_ALIAS"
+          [ -z "$KEY_PASS" ] && missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "Missing repository secret(s):$missing"
+            echo "See PLAY.md — 'Generate the upload key' — for how to create and add them."
+            exit 1
+          fi
+
+      - name: Install Bubblewrap
+        run: npm install -g @bubblewrap/cli
+
+      - name: Restore the upload keystore from the secret
+        working-directory: twa
+        env:
+          KS: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          echo "$KS" | base64 -d > upload.jks
+          # Never let the key reach an artifact or a log.
+          echo "::add-mask::$(sha256sum upload.jks | cut -d' ' -f1)"
+
+      - name: Apply version overrides (optional inputs)
+        working-directory: twa
+        env:
+          VNAME: ${{ inputs.versionName }}
+          VCODE: ${{ inputs.versionCode }}
+        run: |
+          if [ -n "$VNAME" ]; then
+            node -e "const f='twa-manifest.json';const m=require('./'+f);m.appVersionName=process.env.VNAME;require('fs').writeFileSync(f,JSON.stringify(m,null,2)+'\n')"
+          fi
+          if [ -n "$VCODE" ]; then
+            node -e "const f='twa-manifest.json';const m=require('./'+f);m.appVersionCode=parseInt(process.env.VCODE,10);require('fs').writeFileSync(f,JSON.stringify(m,null,2)+'\n')"
+          fi
+          echo "Building version $(node -p "require('./twa-manifest.json').appVersionName") ($(node -p "require('./twa-manifest.json').appVersionCode"))"
+
+      - name: Accept Android SDK licences
+        run: yes | sdkmanager --licenses >/dev/null 2>&1 || true
+
+      - name: Point Bubblewrap at the runner's preinstalled JDK and Android SDK
+        run: |
+          # Without this, bubblewrap prompts to download its own JDK/SDK and
+          # hangs forever on a non-interactive runner.
+          mkdir -p "$HOME/.bubblewrap"
+          cat > "$HOME/.bubblewrap/config.json" <<JSON
+          {
+            "jdkPath": "$JAVA_HOME",
+            "androidSdkPath": "$ANDROID_HOME"
+          }
+          JSON
+          cat "$HOME/.bubblewrap/config.json"
+
+      - name: Generate the Android project from twa-manifest.json
+        working-directory: twa
+        run: |
+          # The repo commits only twa-manifest.json (the Gradle project is
+          # generated output). `update` materialises it before building.
+          bubblewrap update --skipVersionUpgrade
+
+      - name: Build signed .aab and .apk
+        working-directory: twa
+        env:
+          BUBBLEWRAP_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          BUBBLEWRAP_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          # --skipPwaValidation: padel.azma.app is already covered by our own
+          # PWA checks; this keeps the build from failing on a transient fetch.
+          bubblewrap build --skipPwaValidation
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: padelzit-android
+          retention-days: 14
+          if-no-files-found: error
+          path: |
+            twa/app-release-bundle.aab
+            twa/app-release-signed.apk
+
+      - name: Remove the keystore from the runner
+        if: always()
+        working-directory: twa
+        run: rm -f upload.jks

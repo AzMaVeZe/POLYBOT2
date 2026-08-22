@@ -4,3 +4,14 @@
 # Local-only account/login reference — has real personal emails, this repo is
 # public, never commit it. See ACCOUNTS.md for the public-safe version.
 ACCOUNTS.local.md
+
+# Android signing keys — the Play upload key must NEVER be committed. It lives
+# in the ANDROID_KEYSTORE_BASE64 repository secret; see PLAY.md.
+*.jks
+*.keystore
+
+# Android build outputs (produced by the build-twa workflow, downloaded as
+# artifacts — not source).
+*.aab
+*.apk
+twa/build/
